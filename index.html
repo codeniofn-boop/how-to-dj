@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DJ Academy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A guided, gamified course for beginner DJs: counting beats, beatmatching, bass swaps and harmonic mixing, practised on a built-in two-deck controller.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: '#0a0c11', panel: '#11141b', panel2: '#171b24', panel3: '#1f2430',
+          line: '#262c3a', line2: '#323a4b',
+          fg: '#e9edf5', muted: '#8d96aa', dim: '#5f6880',
+          neon: '#38c8ff', ok: '#3ddc97', warn: '#ffb454', bad: '#ff5c7a',
+          low: '#ff7a59', mid: '#5fe0a5', high: '#7cc7ff'
+        },
+        fontFamily: {
+          display: ['Unbounded', 'Manrope', 'system-ui', 'sans-serif'],
+          body: ['Manrope', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+          mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace']
+        },
+        boxShadow: {
+          neon: '0 0 0 2px #38c8ff, 0 0 22px 4px rgba(56,200,255,.45)',
+          glow: '0 0 18px rgba(56,200,255,.35)'
+        }
+      }
+    }
+  };
+</script>
+<style>
+  /* Layout: a fixed curriculum rail (the roadmap) on the left, a working stage on the right.
+     In a lesson the stage shows the instructor panel above the two-deck controller;
+     the drills and the dashboard swap into the same stage. Single committed dark-studio look. */
+  :root {
+    --bg: #0a0c11;
+    --panel: #11141b;
+    --panel-2: #171b24;
+    --panel-3: #1f2430;
+    --line: #262c3a;
+    --line-2: #323a4b;
+    --fg: #e9edf5;
+    --muted: #8d96aa;
+    --dim: #5f6880;
+    --neon: #38c8ff;
+    --neon-soft: rgba(56, 200, 255, .16);
+    --neon-glow: rgba(56, 200, 255, .5);
+    --ok: #3ddc97;
+    --warn: #ffb454;
+    --bad: #ff5c7a;
+    --low: #ff7a59;
+    --mid: #5fe0a5;
+    --high: #7cc7ff;
+    --font-display: 'Unbounded', 'Manrope', system-ui, sans-serif;
+    --font-body: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0 0 auto;
+    height: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 10;
+  }
+  h1, h2, h3 { text-wrap: balance; }
+  .font-display { letter-spacing: -0.01em; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* Guided-tour highlight: neon blue ring + pulse */
+  .tour-target {
+    position: relative; z-index: 1;
+    box-shadow: 0 0 0 2px var(--neon), 0 0 22px 4px var(--neon-glow);
+    animation: tourPulse 1.4s ease-in-out infinite;
+    border-radius: 12px;
+  }
+  .tour-target.rounded-full { border-radius: 9999px; }
+  @keyframes tourPulse {
+    0%, 100% { box-shadow: 0 0 0 2px var(--neon), 0 0 14px 2px var(--neon-glow); }
+    50% { box-shadow: 0 0 0 3px var(--neon), 0 0 30px 8px var(--neon-glow); }
+  }
+
+  .knob {
+    touch-action: none; cursor: ns-resize; user-select: none;
+    background: radial-gradient(circle at 35% 30%, #2b3242, #141822 72%);
+    border-radius: 9999px;
+  }
+  .slider { touch-action: none; user-select: none; }
+  .fader-track {
+    background: linear-gradient(to right, transparent 46%, #05070a 46%, #05070a 54%, transparent 54%);
+  }
+  .fader-track-h {
+    background: linear-gradient(to bottom, transparent 46%, #05070a 46%, #05070a 54%, transparent 54%);
+  }
+  .fader-cap {
+    background: linear-gradient(180deg, #343b4a, #1b202b);
+    border: 1px solid #434b5d;
+    box-shadow: 0 3px 10px rgba(0,0,0,.6);
+  }
+  .led {
+    width: 12px; height: 12px; border-radius: 9999px;
+    background: #1b202b; border: 1px solid #2b3242;
+    transition: background .05s linear, box-shadow .05s linear;
+  }
+  .led.on { background: var(--neon); box-shadow: 0 0 10px var(--neon); border-color: var(--neon); }
+  .led.one { background: var(--warn); box-shadow: 0 0 10px var(--warn); border-color: var(--warn); }
+  .wave-canvas { width: 100%; height: 100%; display: block; }
+  .scroll-thin { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+  .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scroll-thin::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 8px; }
+  :focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
+  button { font-family: inherit; }
+  .btn-press:active { transform: translateY(1px); }
+  .shake { animation: shake .4s ease; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .rise { animation: rise .35s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .fade-out { animation: fadeOut 1.2s ease forwards; }
+  @keyframes fadeOut { 0% { opacity: 1; transform: translateY(0) } 100% { opacity: 0; transform: translateY(-18px) } }
+  @media (prefers-reduced-motion: reduce) {
+    .tour-target, .shake, .rise, .fade-out { animation: none !important; }
+    * { transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script>window.react = window.React;</script>
+<script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+const LucideLib = window.LucideReact || {};
+
+/* ============================================================
+   Utilities
+   ============================================================ */
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeInOut = t => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
+const nowMs = () => performance.now();
+const wrapHalf = x => x - Math.round(x);                 // wraps a beat offset into [-0.5, 0.5]
+const frac = x => x - Math.floor(x);
+const pseudo = n => { const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const cx = (...a) => a.filter(Boolean).join(' ');
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+function Icon({ name, size = 18, className = '', ...rest }) {
+  const C = LucideLib[name];
+  if (!C) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="6" />
+      </svg>
+    );
+  }
+  return <C size={size} className={className} aria-hidden="true" {...rest} />;
+}
+
+/* ============================================================
+   Music data: keys, tracks, patterns, track structure
+   ============================================================ */
+const NOTE_IDX = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, 'F#': 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+// Camelot number -> [minor root (A side), major root (B side)]
+const CAMELOT = { 1: ['Ab', 'B'], 2: ['Eb', 'F#'], 3: ['Bb', 'Db'], 4: ['F', 'Ab'], 5: ['C', 'Eb'], 6: ['G', 'Bb'],
+  7: ['D', 'F'], 8: ['A', 'C'], 9: ['E', 'G'], 10: ['B', 'D'], 11: ['F#', 'A'], 12: ['Db', 'E'] };
+const keyInfo = k => {
+  const n = parseInt(k, 10), l = k.slice(-1);
+  const root = CAMELOT[n][l === 'A' ? 0 : 1];
+  return { n, l, root, name: `${root} ${l === 'A' ? 'minor' : 'major'}`, rootHz: 65.41 * Math.pow(2, NOTE_IDX[root] / 12) };
+};
+const compatibleKeys = (a, b) => {
+  const A = keyInfo(a), B = keyInfo(b);
+  if (A.l === B.l) { const d = Math.abs(A.n - B.n); return d === 0 || d === 1 || d === 11; }
+  return A.n === B.n;
+};
+const keyRelation = (from, to) => {
+  if (from === to) return 'Same key';
+  const A = keyInfo(from), B = keyInfo(to);
+  if (A.n === B.n) return A.l === 'A' ? 'Relative major (mood lift)' : 'Relative minor (moodier)';
+  if (A.l === B.l) {
+    const up = (B.n - A.n + 12) % 12;
+    if (up === 1) return '+1: energy boost';
+    if (up === 11) return '−1: energy drop';
+    return `${Math.min(up, 12 - up)} steps away: clash`;
+  }
+  return 'Different letter and number: clash';
+};
+
+// Bass note offsets (semitones from root) at 16th-note steps, plus stab steps
+const PATTERNS = {
+  a: { bass: { 0: 0, 3: 0, 6: 0, 8: 0, 11: 3, 14: -2 }, stab: [2, 10] },
+  b: { bass: { 0: 0, 2: 0, 4: 3, 7: 0, 8: 0, 10: 7, 12: 0, 14: 0 }, stab: [6, 14] },
+  c: { bass: { 0: 0, 2: 0, 5: 0, 8: 0, 10: 5, 13: 0 }, stab: [4, 12] },
+};
+
+const TRACKS = {
+  nightShift:   { id: 'nightShift',   title: 'Night Shift',      artist: 'Kora Vale',    bpm: 126, key: '8A',  pattern: 'a' },
+  glassHarbour: { id: 'glassHarbour', title: 'Glass Harbour',    artist: 'Dmitri Lune',  bpm: 126, key: '9A',  pattern: 'b' },
+  copperSky:    { id: 'copperSky',    title: 'Copper Sky',       artist: 'Oren Dale',    bpm: 122, key: '7A',  pattern: 'b' },
+  lowTide:      { id: 'lowTide',      title: 'Low Tide Theory',  artist: 'Ferra',        bpm: 125, key: '8B',  pattern: 'c' },
+  staticBloom:  { id: 'staticBloom',  title: 'Static Bloom',     artist: 'Yusra K.',     bpm: 127, key: '3B',  pattern: 'b' },
+  saltwater:    { id: 'saltwater',    title: 'Saltwater Run',    artist: 'Mimi Ayo',     bpm: 126, key: '11A', pattern: 'c' },
+  violetHours:  { id: 'violetHours',  title: 'Violet Hours',     artist: 'Tessaro',      bpm: 124, key: '2A',  pattern: 'a' },
+};
+const CRATE = ['glassHarbour', 'staticBloom', 'lowTide', 'saltwater', 'copperSky', 'violetHours'];
+
+// A 64-bar loop of typical dance-track structure. Something changes every 8 bars.
+const SECTIONS = [
+  { until: 8,  name: 'Intro',     kick: 1, bass: 0,  mid: .35, high: .8 },
+  { until: 16, name: 'Build',     kick: 1, bass: 0,  mid: .8,  high: 1 },
+  { until: 32, name: 'Groove',    kick: 1, bass: 1,  mid: 1,   high: 1 },
+  { until: 40, name: 'Breakdown', kick: 0, bass: 0,  mid: .7,  high: .4 },
+  { until: 48, name: 'Build',     kick: 1, bass: .5, mid: .9,  high: 1 },
+  { until: 64, name: 'Drop',      kick: 1, bass: 1,  mid: 1,   high: 1 },
+];
+const sectionOf = bar => { const b = ((bar % 64) + 64) % 64; return SECTIONS.find(s => b < s.until); };
+
+// Visual energy of a 16th-note step, split into the three EQ bands
+function stepAmps(patternId, step) {
+  const s = ((step % 16) + 16) % 16, bar = Math.floor(step / 64), sec = sectionOf(bar), pat = PATTERNS[patternId];
+  let low = 0, mid = 0.12, high = 0;
+  if (s % 4 === 0) low += 1 * sec.kick;
+  if (s % 4 === 1) low += 0.4 * sec.kick;
+  if (pat.bass[s] !== undefined) low += 0.65 * sec.bass;
+  if (s === 4 || s === 12) mid += 0.85;
+  if (pat.stab.includes(s)) mid += 0.55;
+  high += s % 2 === 0 ? (s % 4 === 2 ? 0.85 : 0.5) : 0.2;
+  const j = 0.8 + 0.2 * pseudo(step * 3 + patternId.charCodeAt(0));
+  return { low: Math.min(1, low) * j, mid: Math.min(1, mid * sec.mid) * j, high: Math.min(1, high * sec.high) * j };
+}
+
+/* ============================================================
+   Deck transport + mixer maths
+   ============================================================ */
+const makeDeck = (id, track, over = {}) => ({
+  id, track, playing: false, startedAt: 0, offsetBeats: 0, cueBeats: 0, pitch: 0,
+  eq: { low: 0, mid: 0, high: 0 }, fader: 1, autoSync: false, ...over,
+});
+const effBpm = d => ((d.track && d.track.bpm) || 120) * (1 + d.pitch / 100);
+const beatsOf = (d, t) => (d.playing ? d.offsetBeats + ((t - d.startedAt) / 60000) * effBpm(d) : d.offsetBeats);
+const rebase = (d, t) => ({ ...d, offsetBeats: beatsOf(d, t), startedAt: t });
+const bandGain = v => (v >= 0 ? 1 + v : Math.pow(Math.max(0, 1 + v), 2));
+const faderGain = f => f * f;
+const xfGains = x => ({ A: Math.cos((x * Math.PI) / 2), B: Math.sin((x * Math.PI) / 2) });
+const eqLabel = v => (v <= -0.98 ? 'KILL' : `${v > 0 ? '+' : ''}${(v > 0 ? 6 * v : 24 * v).toFixed(1)} dB`);
+const pctLabel = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+const pitchFor = (targetBpm, baseBpm) => (targetBpm / baseBpm - 1) * 100;
+
+function bassLevels(sim) {
+  const xg = xfGains(sim.xf);
+  const lv = id => {
+    const d = sim.decks[id];
+    if (!d.track || !d.playing) return 0;
+    const sec = sectionOf(Math.floor(beatsOf(d, nowMs()) / 4));
+    return bandGain(d.eq.low) * faderGain(d.fader) * xg[id] * (sec.kick * 0.6 + sec.bass * 0.4);
+  };
+  return { A: Math.min(1, lv('A')), B: Math.min(1, lv('B')) };
+}
+function tempoStatus(sim, t) {
+  const A = sim.decks.A, B = sim.decks.B;
+  if (!A.track || !B.track) return { dBpm: 0, phase: 0, tempoOk: false, locked: false, both: false };
+  const dBpm = effBpm(B) - effBpm(A);
+  const both = A.playing && B.playing;
+  const phase = both ? wrapHalf(beatsOf(B, t) - beatsOf(A, t)) : 0;
+  const tempoOk = Math.abs(dBpm) < 0.1;
+  return { dBpm, phase, tempoOk, both, locked: both && tempoOk && Math.abs(phase) < 0.06 };
+}
+
+/* ============================================================
+   Curriculum
+   ============================================================ */
+const LESSONS = [
+  {
+    id: 1, slug: 'phrasing', title: 'Counting Beats & Phrasing', subtitle: 'Understanding 4-bar and 8-bar structures', icon: 'Hash',
+    intro: 'Dance music is built on a grid. Learn to feel it and every mix you do will land in the right place.',
+    concepts: [
+      { icon: 'Activity', term: 'Beat', text: 'The steady pulse. The kick drum usually hits on every beat. Count it out loud: 1, 2, 3, 4.' },
+      { icon: 'Hash', term: 'Bar', text: 'Four beats. After beat 4 you start again at 1, and that is a new bar.' },
+      { icon: 'Layers', term: 'Phrase', text: 'Eight bars, which is 32 beats. Producers change something at the start of every phrase: a sound comes in, the bass drops out, a vocal starts. Many tracks also use 4-bar (16-beat) mini-phrases inside that.' },
+      { icon: 'Target', term: 'Why it matters', text: 'Start the next track on beat 1 of a phrase and the changes in both tracks line up. The mix sounds planned instead of random.' },
+    ],
+    setup: () => ({
+      decks: { A: makeDeck('A', TRACKS.nightShift), B: makeDeck('B', TRACKS.glassHarbour, { fader: 1 }) },
+      xf: 0,
+    }),
+    steps: [
+      { targets: ['A.play'], title: 'Press play', text: 'Press PLAY on Deck A. The kick drum hits on every beat. That pulse is what you will count.',
+        tip: 'Count out loud with the beat lights: 1, 2, 3, 4.', goal: c => c.sim.decks.A.playing, run: api => api.play('A') },
+      { targets: ['A.counter'], title: 'Count the bars', text: 'Four beats make one BAR. Watch the counter: when beat 4 passes, the bar number ticks up and the count starts again at 1. Keep counting for four bars (16 beats).',
+        tip: 'Count bars the way DJs do: "1-2-3-4, 2-2-3-4, 3-2-3-4, 4-2-3-4".', goal: c => c.beatsA - c.startBeats >= 16, waiting: 'Counting with you…' },
+      { targets: ['A.phrase'], title: 'Feel the phrase', text: 'Eight bars make a PHRASE (32 beats). The phrase strip fills as the bars pass. Watch what happens when a new phrase begins: the track changes section, because producers arrange music in 8-bar blocks.',
+        tip: 'The section label above the waveform (Intro, Build, Groove…) changes only on phrase boundaries.', goal: c => Math.floor(c.beatsA / 32) > Math.floor(c.startBeats / 32), waiting: 'Waiting for the next phrase…' },
+      { targets: ['B.play'], title: 'Drop on the one', text: 'Now press PLAY on Deck B exactly when Deck A starts a new bar (beat 1). DJs call this "dropping on the one".',
+        tip: 'Watch Deck A\'s beat lights. Press right as the orange light flashes.', goal: c => c.sim.decks.B.playing,
+        onMet: c => { const off = wrapHalf(c.beatsA / 4) * 4; const ms = Math.round(Math.abs(off) / effBpm(c.sim.decks.A) * 60000); return ms <= 120 ? `Dropped ${ms} ms ${off >= 0 ? 'late' : 'early'}. That is on the one.` : `Dropped ${ms} ms ${off >= 0 ? 'late' : 'early'}. Close enough to learn from; the Phrase Drop drill will sharpen this.`; },
+        run: async api => { await api.waitForBeatOne('A'); api.play('B'); } },
+      { targets: ['xf'], title: 'Hear both tracks', text: 'Slide the CROSSFADER to the middle so both tracks play together. Both counters now run in step because the tracks share one tempo.',
+        tip: 'Sounds a little muddy with both basslines? Lesson 3 fixes exactly that.', goal: c => Math.abs(c.sim.xf - 0.5) < 0.12, run: api => api.tween('xf', 0.5, 1500) },
+    ],
+    quiz: [
+      { q: 'How many beats are in one bar of house or techno?', options: ['2', '4', '8', '16'], answer: 1, why: 'Count 1-2-3-4 and you have counted a bar.' },
+      { q: 'A standard phrase is how long?', options: ['4 beats', '8 beats', '8 bars (32 beats)', '64 bars'], answer: 2, why: 'Eight bars of four beats each. Producers change something at the start of each one.' },
+      { q: 'The safest moment to start the next track is…', options: ['Whenever the crowd cheers', 'On beat 1 of a new phrase', 'On beat 3 of any bar', 'During the vocal'], answer: 1, why: 'Dropping on beat 1 of a phrase lines up both tracks\' changes.' },
+    ],
+  },
+  {
+    id: 2, slug: 'beatmatch', title: 'The Art of the Beatmatch', subtitle: 'Aligning different track speeds by hand', icon: 'Gauge',
+    intro: 'Two tracks, two speeds. Beatmatching makes them one tempo so the kicks land together.',
+    concepts: [
+      { icon: 'Gauge', term: 'BPM', text: 'Beats per minute, the tempo. 126 BPM means 126 kicks every minute.' },
+      { icon: 'SlidersHorizontal', term: 'Pitch slider', text: 'Speeds the track up or down by a percentage, usually within ±8%. Pushing a 122 BPM track to +3.3% gives 126 BPM.' },
+      { icon: 'Activity', term: 'Phase', text: 'Same speed is not the same timing. If the kicks do not land together, nudge the incoming track forward or back until they do.' },
+      { icon: 'Headphones', term: 'Headphone cue', text: 'You hear the incoming track in your headphones only, match it there, then bring it in on the channel fader.' },
+    ],
+    setup: () => ({
+      decks: { A: makeDeck('A', TRACKS.nightShift, { offsetBeats: 64, cueBeats: 64 }), B: makeDeck('B', TRACKS.copperSky, { offsetBeats: 64, cueBeats: 64, fader: 0 }) },
+      xf: 0.5,
+    }),
+    steps: [
+      { targets: ['A.play'], title: 'Start the live track', text: 'Press PLAY on Deck A. This is what the crowd hears: 126.0 BPM.', goal: c => c.sim.decks.A.playing, run: api => api.play('A') },
+      { targets: ['B.bpm'], title: 'Read both tempos', text: 'Look at Deck B: 122.0 BPM, slower than Deck A. To mix them, Deck B must run at 126.0. That means speeding it up by about +3.3%.',
+        tip: 'The maths: (126 ÷ 122 − 1) × 100 = +3.3%.', goal: null },
+      { targets: ['B.play'], title: 'Start Deck B', text: 'Press PLAY on Deck B. Watch the two rows of beat lights: they drift apart because the tempos differ.', goal: c => c.sim.decks.B.playing, run: api => api.play('B') },
+      { targets: ['B.pitch'], title: 'Match the tempo', text: 'Push Deck B\'s PITCH slider up until its readout shows 126.0 BPM. Small moves: the last 0.1 BPM matters.',
+        tip: 'The TEMPO meter in the mixer shows the difference. Aim for 0.0.', goal: c => Math.abs(effBpm(c.sim.decks.B) - effBpm(c.sim.decks.A)) < 0.1,
+        run: api => api.tween('B.pitch', pitchFor(126, 122), 2500) },
+      { targets: ['B.nudge', 'phase'], title: 'Line up the beats', text: 'Same speed is not the same timing. Tap NUDGE ◀ or ▶ on Deck B to slide its beats until both rows of lights flash together and the meter reads LOCKED.',
+        tip: 'If Deck B flashes after Deck A (late), tap ▶ to push it forward. If it flashes first, tap ◀.', goal: c => tempoStatus(c.sim, c.now).locked,
+        run: api => api.alignPhase('B') },
+      { targets: ['B.fader'], title: 'Blend it in', text: 'Locked. Bring Deck B\'s channel fader up slowly over the next 16 beats. The crowd now hears both tracks in time.',
+        goal: c => c.sim.decks.B.fader >= 0.95, run: api => api.tween('B.fader', 1, 7500) },
+    ],
+    quiz: [
+      { q: 'Deck A plays at 126 BPM. Deck B\'s track is 122 BPM. What do you do?', options: ['Slow Deck A down by 8%', 'Push Deck B\'s pitch up by about +3.3%', 'Press play harder', 'Turn Deck B\'s LOW knob up'], answer: 1, why: '(126 ÷ 122 − 1) × 100 ≈ +3.3%. You match the incoming track to the live one.' },
+      { q: 'Both decks read 126.0 BPM but the beat lights flash out of step. What is wrong?', options: ['The tempo is still different', 'The phase is off: nudge the incoming track', 'The EQ is wrong', 'The crossfader is centred'], answer: 1, why: 'Same speed is not the same timing. Nudge until the beats land together.' },
+      { q: 'While beatmatching, where do you listen to the incoming track?', options: ['Through the main speakers', 'In your headphones (the cue)', 'You do not need to listen', 'On your phone'], answer: 1, why: 'The cue lets you match privately before the crowd hears the new track.' },
+    ],
+  },
+  {
+    id: 3, slug: 'bass-swap', title: 'The Perfect Bass Swap', subtitle: 'EQ management for clean transitions', icon: 'SlidersHorizontal',
+    intro: 'Two basslines at once turn a mix into mud. The bass swap keeps only one of them in play.',
+    concepts: [
+      { icon: 'Waves', term: 'Low', color: 'var(--low)', text: 'Kick drum and bassline, roughly 20–250 Hz. This is the band that clashes the most.' },
+      { icon: 'Radio', term: 'Mid', color: 'var(--mid)', text: 'Vocals, synths, snares and claps, 250 Hz to 4 kHz. Blends fairly easily.' },
+      { icon: 'Sparkles', term: 'High', color: 'var(--high)', text: 'Hi-hats, cymbals and air, above 4 kHz. Blends easily.' },
+      { icon: 'ArrowLeftRight', term: 'The swap', text: 'Keep the incoming track\'s LOW off while its mids and highs blend in. On beat 1 of a phrase, swap the lows in one quick motion. Then fade the outgoing track out.' },
+    ],
+    setup: () => ({
+      decks: {
+        A: makeDeck('A', TRACKS.nightShift, { playing: true, startedAt: nowMs(), offsetBeats: 64, cueBeats: 64 }),
+        B: makeDeck('B', TRACKS.glassHarbour, { playing: true, startedAt: nowMs(), offsetBeats: 64, cueBeats: 64, fader: 1 }),
+      },
+      xf: 0.5,
+    }),
+    steps: [
+      { targets: ['mud'], title: 'Hear the problem', text: 'Both tracks are playing with full bass. Two kick drums and two basslines are fighting over the same low frequencies, so the BASS CLASH meter sits in the red. DJs call this a muddy mix.',
+        tip: 'Look at the waveforms: the orange (low) energy is heavy on both decks.', goal: null },
+      { targets: ['B.eq.low'], title: 'Cut the incoming bass', text: 'Turn Deck B\'s LOW knob all the way down (counter-clockwise) to KILL its bass. Watch the orange part of Deck B\'s waveform disappear and the clash meter drop to green.',
+        tip: 'Drag the knob up or down with your mouse or finger. Double-click resets it to 12 o\'clock.', goal: c => c.sim.decks.B.eq.low <= -0.95, run: api => api.tween('B.eq.low', -1, 1500) },
+      { targets: ['A.eq.low', 'B.eq.low'], title: 'The swap', text: 'Now swap. On beat 1 of the next phrase, turn Deck A\'s LOW down to KILL while turning Deck B\'s LOW up to 12 o\'clock. One quick motion, over one or two beats.',
+        tip: 'Mids and highs stay where they are. Only the bass changes hands.', goal: c => c.sim.decks.A.eq.low <= -0.95 && c.sim.decks.B.eq.low >= -0.1,
+        run: api => Promise.all([api.tween('A.eq.low', -1, 900), api.tween('B.eq.low', 0, 900)]) },
+      { targets: ['A.fader'], title: 'Fade the old track out', text: 'Deck B now owns the bass. Bring Deck A\'s channel fader all the way down over the next 16 beats.',
+        goal: c => c.sim.decks.A.fader <= 0.05, run: api => api.tween('A.fader', 0, 7500) },
+      { targets: ['A.eq.low'], title: 'Reset for the next mix', text: 'Turn Deck A\'s LOW knob back up to 12 o\'clock so the channel is ready for the next track. That is a clean transition.',
+        goal: c => Math.abs(c.sim.decks.A.eq.low) < 0.1, run: api => api.tween('A.eq.low', 0, 800) },
+    ],
+    quiz: [
+      { q: 'Why cut the incoming track\'s LOW EQ while you blend it in?', options: ['To make it louder', 'Two kicks and two basslines clash and sound muddy', 'Because highs matter more', 'To save battery'], answer: 1, why: 'Low frequencies pile up fast. One bass at a time keeps the mix clean.' },
+      { q: 'The cleanest moment for the bass swap is…', options: ['Any time, slowly over two minutes', 'On beat 1 of a phrase, in one quick motion', 'Right before the vocal', 'After the track ends'], answer: 1, why: 'Swapping on the one keeps the groove intact and the crowd never notices the seam.' },
+      { q: 'Which EQ band carries the kick drum and bassline?', options: ['High', 'Mid', 'Low', 'None of them'], answer: 2, why: 'Kick and bass live in the lows, roughly 20–250 Hz.' },
+    ],
+  },
+  {
+    id: 4, slug: 'harmonic', title: 'Harmonic Mixing', subtitle: 'Mixing in compatible keys with the Camelot Wheel', icon: 'KeyRound',
+    intro: 'Tracks have keys the way songs have singers. Mix keys that get along and the melodies stop fighting.',
+    concepts: [
+      { icon: 'KeyRound', term: 'Key', text: 'The "home note" and scale a track is built on. Tracks in related keys share most of their notes.' },
+      { icon: 'Compass', term: 'Camelot Wheel', text: 'Turns keys into numbers 1 to 12 and letters A (minor) or B (major). Neighbours on the wheel mix cleanly.' },
+      { icon: 'ListChecks', term: 'The rules', text: 'Same key is the safest. One number up or down with the same letter is smooth. Same number, other letter is a mood change.' },
+      { icon: 'TrendingUp', term: 'Energy', text: '+1 lifts the energy, −1 relaxes it. Plan a set as a trip around the wheel. Key software is sometimes wrong, so trust your ears.' },
+    ],
+    setup: () => ({
+      decks: {
+        A: makeDeck('A', TRACKS.nightShift, { playing: true, startedAt: nowMs(), offsetBeats: 64, cueBeats: 64 }),
+        B: makeDeck('B', null, { fader: 0, autoSync: true }),
+      },
+      xf: 0.5,
+    }),
+    steps: [
+      { targets: ['A.key'], title: 'Read the key', text: 'Every track has a musical key. Deck A\'s track is in 8A on the Camelot Wheel, which is A minor. The wheel turns music theory into numbers and letters so you never have to think about scales.', goal: null },
+      { targets: ['wheel'], title: 'Find the neighbours', text: 'Keys next to each other on the wheel mix cleanly. For 8A that means 7A and 9A (one step either way) and 8B (same number, other letter). Tap those three keys on the wheel.',
+        tip: 'Inner ring = A = minor (moodier). Outer ring = B = major (brighter).', goal: c => ['7A', '9A', '8B'].every(k => c.picks.includes(k)), run: api => api.pickKeys(['7A', '9A', '8B']) },
+      { targets: ['crate'], title: 'Choose a compatible track', text: 'Pick a track from the crate whose key works with 8A and load it onto Deck B. Tracks in a clashing key are a trap.',
+        tip: 'Compatible with 8A: 7A, 8A, 9A and 8B.', goal: c => !!c.sim.decks.B.track && compatibleKeys(c.sim.decks.A.track.key, c.sim.decks.B.track.key), run: api => api.load('B', 'glassHarbour') },
+      { targets: ['B.play', 'B.fader'], title: 'Mix in key', text: 'Press PLAY on Deck B (its tempo is auto-synced to Deck A so you can focus on key) and raise its channel fader. The two tracks share their notes, so nothing sounds sour.',
+        goal: c => c.sim.decks.B.playing && c.sim.decks.B.fader >= 0.95, run: async api => { api.play('B'); await api.sleep(300); await api.tween('B.fader', 1, 4000); } },
+      { targets: ['wheel'], title: 'Plan the journey', text: 'Going +1 around the wheel (8A to 9A) lifts the energy a touch. Going −1 (8A to 7A) relaxes it. Switching letter (8A to 8B) moves from minor to major, a mood change. Plan a set as a journey around the wheel, one step at a time.', goal: null },
+    ],
+    quiz: [
+      { q: 'Deck A is in 8A. Which key is NOT a safe match?', options: ['9A', '8B', '7A', '3B'], answer: 3, why: '3B is five steps away on the other ring. Only 7A, 8A, 9A and 8B are safe.' },
+      { q: 'On the Camelot Wheel, what does the letter mean?', options: ['A = minor key, B = major key', 'A = acoustic, B = bass', 'A = fast, B = slow', 'The DJ\'s initials'], answer: 0, why: 'A keys are minor (moodier), B keys are major (brighter). Same number, other letter = relative keys.' },
+      { q: 'Moving from 8A to 9A usually…', options: ['Lifts the energy slightly', 'Changes the tempo', 'Makes the track quieter', 'Breaks the mix'], answer: 0, why: 'One step clockwise is the classic energy boost. Tempo and volume are separate controls.' },
+    ],
+  },
+];
+const lessonById = id => LESSONS.find(l => l.id === id);
+
+const BADGES = [
+  { id: 'beat-counter', name: 'Beat Counter', how: 'Complete Lesson 1', icon: 'Hash', test: p => p.lessons[1].done },
+  { id: 'locked-in', name: 'Locked In', how: 'Complete Lesson 2', icon: 'Gauge', test: p => p.lessons[2].done },
+  { id: 'bass-boss', name: 'Bass Boss', how: 'Complete Lesson 3', icon: 'SlidersHorizontal', test: p => p.lessons[3].done },
+  { id: 'in-key', name: 'In Key', how: 'Complete Lesson 4', icon: 'KeyRound', test: p => p.lessons[4].done },
+  { id: 'phrase-master', name: 'Phrase Master', how: 'Score 90% or more in a Phrase Drop round', icon: 'Target', test: p => p.phrase.best >= 90 },
+  { id: 'clean-transitions', name: 'Clean Transitions', how: 'Isolate the bass in all 3 Ear Training rounds', icon: 'Ear', test: p => p.ear.rounds.some(r => r.success) },
+  { id: 'sharp-ears', name: 'Sharp Ears', how: 'Average under 5 seconds in a clean Ear Training run', icon: 'Zap', test: p => p.ear.bestAvg != null && p.ear.bestAvg < 5 },
+  { id: 'resident', name: 'Resident DJ', how: 'Complete all four lessons', icon: 'GraduationCap', test: p => [1, 2, 3, 4].every(i => p.lessons[i].done) },
+];
+const LEVELS = [[0, 'Beginner'], [150, 'Bedroom DJ'], [400, 'Opening Act'], [700, 'Resident DJ'], [1000, 'Headliner']];
+const levelFor = xp => {
+  let i = 0; for (let k = 0; k < LEVELS.length; k++) if (xp >= LEVELS[k][0]) i = k;
+  const next = LEVELS[i + 1];
+  return { name: LEVELS[i][1], index: i, next: next ? next[0] : null, nextName: next ? next[1] : null, floor: LEVELS[i][0] };
+};
+
+/* ============================================================
+   Progress (local React state, mirrored to localStorage when available)
+   ============================================================ */
+const STORAGE_KEY = 'dj-academy-progress-v1';
+const freshProgress = () => ({
+  lessons: { 1: { tour: false, done: false }, 2: { tour: false, done: false }, 3: { tour: false, done: false }, 4: { tour: false, done: false } },
+  xp: 0, badges: [], phrase: { rounds: [], best: 0 }, ear: { rounds: [], bestAvg: null },
+});
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { const p = JSON.parse(raw); const f = freshProgress(); return { ...f, ...p, lessons: { ...f.lessons, ...(p.lessons || {}) }, phrase: { ...f.phrase, ...(p.phrase || {}) }, ear: { ...f.ear, ...(p.ear || {}) } }; }
+  } catch (e) { /* storage unavailable: keep in-memory state only */ }
+  return freshProgress();
+}
+function saveProgress(p) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch (e) { /* ignore */ } }
+function applyProgress(p, action) {
+  if (action.type === 'reset') return { next: freshProgress(), earned: [], xp: 0 };
+  const next = { ...p, lessons: { ...p.lessons } };
+  let xp = 0;
+  if (action.type === 'tour') { const l = p.lessons[action.id]; if (!l.tour) { next.lessons[action.id] = { ...l, tour: true }; xp += 50; } }
+  if (action.type === 'quiz') { const l = p.lessons[action.id]; if (!l.done) { next.lessons[action.id] = { ...l, tour: true, done: true }; xp += 100; } }
+  if (action.type === 'phrase') { const r = action.round; next.phrase = { rounds: [r, ...p.phrase.rounds].slice(0, 20), best: Math.max(p.phrase.best, r.pct) }; xp += Math.round(r.pct / 2); }
+  if (action.type === 'ear') {
+    const r = action.round;
+    const bestAvg = r.success && (p.ear.bestAvg == null || r.avg < p.ear.bestAvg) ? r.avg : p.ear.bestAvg;
+    next.ear = { rounds: [r, ...p.ear.rounds].slice(0, 20), bestAvg }; xp += r.success ? 60 : 20;
+  }
+  next.xp = p.xp + xp;
+  const earned = BADGES.filter(b => !next.badges.includes(b.id) && b.test(next));
+  next.badges = [...next.badges, ...earned.map(b => b.id)];
+  return { next, earned, xp };
+}
+
+/* ============================================================
+   Audio engine (Web Audio, synthesised). Optional: the app is fully usable muted.
+   ============================================================ */
+class AudioEngine {
+  constructor() { this.ctx = null; this.enabled = true; this.getSim = null; this.cursors = {}; this.timer = null; this.noise = null; this.failed = false; }
+  ensure() {
+    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {}); return true; }
+    if (this.failed) return false;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { this.failed = true; return false; }
+      const ctx = new AC(); this.ctx = ctx;
+      this.master = ctx.createGain(); this.master.gain.value = this.enabled ? 0.7 : 0;
+      this.comp = ctx.createDynamicsCompressor(); this.comp.threshold.value = -14; this.comp.ratio.value = 4;
+      this.master.connect(this.comp); this.comp.connect(ctx.destination);
+      this.decks = {};
+      for (const id of ['A', 'B']) {
+        const ch = ctx.createGain(), xf = ctx.createGain(), bands = {};
+        for (const b of ['low', 'mid', 'high']) { bands[b] = ctx.createGain(); bands[b].connect(ch); }
+        ch.connect(xf); xf.connect(this.master); this.decks[id] = { bands, ch, xf };
+      }
+      this.drillBus = ctx.createGain(); this.drillBus.gain.value = 0.9; this.drillBus.connect(this.master);
+      const len = ctx.sampleRate, buf = ctx.createBuffer(1, len, ctx.sampleRate), data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      this.noise = buf;
+      this.timer = setInterval(() => this.tick(), 30);
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      return true;
+    } catch (e) { this.failed = true; return false; }
+  }
+  setEnabled(on) { this.enabled = on; if (this.ctx) this.master.gain.setTargetAtTime(on ? 0.7 : 0, this.ctx.currentTime, 0.03); }
+  bind(getSim) { this.getSim = getSim; this.cursors = {}; }
+  unbind() { this.getSim = null; this.cursors = {}; }
+  toAudio(perfMs) { return this.ctx.currentTime + (perfMs - performance.now()) / 1000; }
+  tick() {
+    if (!this.ctx || !this.getSim) return;
+    const sim = this.getSim(); if (!sim) return;
+    const t = performance.now(), ct = this.ctx.currentTime, xg = xfGains(sim.xf);
+    for (const id of ['A', 'B']) {
+      const d = sim.decks[id], n = this.decks[id];
+      n.ch.gain.setTargetAtTime(faderGain(d.fader), ct, 0.02);
+      n.xf.gain.setTargetAtTime(xg[id], ct, 0.02);
+      for (const b of ['low', 'mid', 'high']) n.bands[b].gain.setTargetAtTime(bandGain(d.eq[b]), ct, 0.02);
+      if (!d.playing || !d.track) { this.cursors[id] = null; continue; }
+      const beats = beatsOf(d, t), bpm = effBpm(d);
+      let cur = this.cursors[id];
+      if (cur == null || cur / 4 < beats - 0.5) cur = Math.ceil(beats * 4);
+      const horizon = beats + (0.18 * bpm) / 60;
+      while (cur / 4 <= horizon) {
+        const perf = d.startedAt + ((cur / 4 - d.offsetBeats) / bpm) * 60000;
+        const at = this.toAudio(perf);
+        if (at >= ct - 0.01) this.scheduleStep(d, cur, at);
+        cur++;
+      }
+      this.cursors[id] = cur;
+    }
+  }
+  scheduleStep(d, step, at) {
+    const s = ((step % 16) + 16) % 16, bar = Math.floor(step / 64), sec = sectionOf(bar);
+    const n = this.decks[d.id], pat = PATTERNS[d.track.pattern], key = keyInfo(d.track.key);
+    if (s % 4 === 0 && sec.kick) this.kick(at, n.bands.low);
+    const off = pat.bass[s];
+    if (off !== undefined && sec.bass) this.bass(at, key.rootHz * Math.pow(2, off / 12), n.bands.low, sec.bass);
+    if ((s === 4 || s === 12) && sec.mid) this.clap(at, n.bands.mid, sec.mid);
+    if (pat.stab.includes(s) && sec.mid) {
+      const iv = key.l === 'A' ? [0, 3, 7] : [0, 4, 7];
+      this.stab(at, iv.map(i => key.rootHz * 4 * Math.pow(2, i / 12)), n.bands.mid, sec.mid);
+    }
+    if (s % 2 === 0 && sec.high) this.hat(at, n.bands.high, s % 4 === 2, sec.high);
+  }
+  kick(at, out) {
+    const c = this.ctx, o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(150, at); o.frequency.exponentialRampToValueAtTime(45, at + 0.09);
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(1, at + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
+    o.connect(g); g.connect(out); o.start(at); o.stop(at + 0.32);
+  }
+  bass(at, f, out, v) {
+    const c = this.ctx, o = c.createOscillator(), o2 = c.createOscillator(), lp = c.createBiquadFilter(), g = c.createGain();
+    o.type = 'sawtooth'; o2.type = 'sine'; o.frequency.value = f; o2.frequency.value = f;
+    lp.type = 'lowpass'; lp.frequency.value = 280;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.5 * v, at + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.24);
+    o.connect(lp); o2.connect(lp); lp.connect(g); g.connect(out); o.start(at); o2.start(at); o.stop(at + 0.26); o2.stop(at + 0.26);
+  }
+  noiseSrc(at, dur) { const s = this.ctx.createBufferSource(); s.buffer = this.noise; s.loop = true; s.start(at); s.stop(at + dur + 0.05); return s; }
+  clap(at, out, v) {
+    const c = this.ctx, s = this.noiseSrc(at, 0.2), bp = c.createBiquadFilter(), g = c.createGain();
+    bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.9;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.5 * v, at + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.18);
+    s.connect(bp); bp.connect(g); g.connect(out);
+  }
+  stab(at, freqs, out, v) {
+    const c = this.ctx;
+    freqs.forEach(f => {
+      const o = c.createOscillator(), lp = c.createBiquadFilter(), g = c.createGain();
+      o.type = 'square'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.value = 1400;
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.07 * v, at + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.16);
+      o.connect(lp); lp.connect(g); g.connect(out); o.start(at); o.stop(at + 0.18);
+    });
+  }
+  hat(at, out, open, v) {
+    const c = this.ctx, dur = open ? 0.16 : 0.045, s = this.noiseSrc(at, dur), hp = c.createBiquadFilter(), g = c.createGain();
+    hp.type = 'highpass'; hp.frequency.value = 7500;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime((open ? 0.2 : 0.14) * v, at + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    s.connect(hp); hp.connect(g); g.connect(out);
+  }
+  click(at, freq, gain, dur = 0.04) {
+    const c = this.ctx, o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(gain, at + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(g); g.connect(this.drillBus); o.start(at); o.stop(at + dur + 0.01);
+  }
+  drillBeat(at, beat, secPerBeat) {
+    if (!this.ctx) return;
+    this.kick(at, this.drillBus);
+    this.hat(at + secPerBeat / 2, this.drillBus, false, 1);
+    const b = ((beat % 32) + 32) % 32;
+    if (b === 0) { this.click(at, 2000, 0.7, 0.09); this.clap(at, this.drillBus, 1); }
+    else if (b % 4 === 0) this.click(at, 1500, 0.45, 0.05);
+    else this.click(at, 1000, 0.3, 0.035);
+  }
+}
+const engine = new AudioEngine();
+
+/* ============================================================
+   UI primitives
+   ============================================================ */
+function Panel({ title, icon, right, children, className = '', highlight = false, tone = 'panel' }) {
+  return (
+    <section className={cx('rounded-2xl border border-line bg-panel', highlight && 'tour-target', className)}>
+      {(title || right) && (
+        <header className="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
+          <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            {icon && <Icon name={icon} size={14} className="text-neon" />}{title}
+          </h3>
+          {right}
+        </header>
+      )}
+      <div className={cx('px-4 pb-4', !title && 'pt-4')}>{children}</div>
+    </section>
+  );
+}
+
+function Chip({ children, tone = 'muted', className = '' }) {
+  const tones = {
+    muted: 'border-line2 text-muted', neon: 'border-neon/50 text-neon bg-neon/10', ok: 'border-ok/50 text-ok bg-ok/10',
+    warn: 'border-warn/50 text-warn bg-warn/10', bad: 'border-bad/50 text-bad bg-bad/10', fg: 'border-line2 text-fg bg-panel3',
+  };
+  return <span className={cx('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold tracking-wide', tones[tone], className)}>{children}</span>;
+}
+
+function Button({ children, onClick, tone = 'ghost', size = 'md', disabled, className = '', icon, highlight, title, type = 'button' }) {
+  const tones = {
+    primary: 'bg-neon text-bg hover:bg-[#5fd4ff] font-bold shadow-glow',
+    ghost: 'bg-panel3 text-fg hover:bg-line2 border border-line2',
+    subtle: 'bg-transparent text-muted hover:text-fg hover:bg-panel3',
+    ok: 'bg-ok text-bg font-bold hover:brightness-110',
+    danger: 'bg-transparent text-bad border border-bad/40 hover:bg-bad/10',
+  };
+  const sizes = { sm: 'px-2.5 py-1 text-xs', md: 'px-3.5 py-2 text-sm', lg: 'px-5 py-3 text-base' };
+  return (
+    <button type={type} title={title} disabled={disabled} onClick={onClick}
+      className={cx('btn-press inline-flex items-center justify-center gap-2 rounded-xl transition-colors disabled:cursor-not-allowed disabled:opacity-40', tones[tone], sizes[size], highlight && 'tour-target', className)}>
+      {icon && <Icon name={icon} size={size === 'sm' ? 14 : 16} />}{children}
+    </button>
+  );
+}
+
+/* Rotary knob: drag up/down, arrow keys, double-click to reset */
+function Knob({ value, onChange, label, size = 52, color = 'var(--neon)', min = -1, max = 1, format = eqLabel, highlight, disabled }) {
+  const ref = useRef(null), drag = useRef(null);
+  const range = max - min, norm = (value - min) / range;
+  const startA = -135, sweep = 270, angle = startA + norm * sweep;
+  const zeroAngle = startA + ((clamp(0, min, max) - min) / range) * sweep;
+  const c = size / 2, r = size / 2 - 5;
+  const polar = (deg, rad) => { const a = ((deg - 90) * Math.PI) / 180; return [c + rad * Math.cos(a), c + rad * Math.sin(a)]; };
+  const arc = (a0, a1, rad) => {
+    if (Math.abs(a1 - a0) < 0.01) return '';
+    const [x0, y0] = polar(a0, rad), [x1, y1] = polar(a1, rad);
+    return `M ${x0} ${y0} A ${rad} ${rad} 0 ${Math.abs(a1 - a0) > 180 ? 1 : 0} ${a1 > a0 ? 1 : 0} ${x1} ${y1}`;
+  };
+  const [ix0, iy0] = polar(angle, r - 15), [ix1, iy1] = polar(angle, r - 7);
+  const onPointerDown = e => { if (disabled) return; e.preventDefault(); ref.current.setPointerCapture(e.pointerId); drag.current = { y: e.clientY, v: value }; };
+  const onPointerMove = e => { if (!drag.current) return; const dy = drag.current.y - e.clientY; onChange(clamp(drag.current.v + (dy / 140) * range, min, max)); };
+  const onPointerUp = () => { drag.current = null; };
+  const onKeyDown = e => {
+    const step = range / 40;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); onChange(clamp(value + step, min, max)); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); onChange(clamp(value - step, min, max)); }
+    else if (e.key === 'Home') onChange(min); else if (e.key === 'End') onChange(max); else if (e.key === '0') onChange(clamp(0, min, max));
+  };
+  return (
+    <div className="flex flex-col items-center gap-1 select-none">
+      <div ref={ref} role="slider" tabIndex={disabled ? -1 : 0} aria-label={label} aria-valuemin={min} aria-valuemax={max}
+        aria-valuenow={+value.toFixed(2)} aria-valuetext={format(value)}
+        className={cx('knob rounded-full', highlight && 'tour-target', disabled && 'opacity-50')} style={{ width: size, height: size }}
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
+        onDoubleClick={() => !disabled && onChange(clamp(0, min, max))} onKeyDown={onKeyDown}>
+        <svg width={size} height={size} aria-hidden="true">
+          <path d={arc(startA, startA + sweep, r)} stroke="var(--line-2)" strokeWidth="3" fill="none" strokeLinecap="round" />
+          <path d={arc(zeroAngle, angle, r)} stroke={color} strokeWidth="3" fill="none" strokeLinecap="round" />
+          <circle cx={c} cy={c} r={r - 9} fill="none" stroke="#2b3242" />
+          <line x1={ix0} y1={iy0} x2={ix1} y2={iy1} stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      </div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color }}>{label}</div>
+      <div className="font-mono text-[11px] text-fg/80 tabular">{format(value)}</div>
+    </div>
+  );
+}
+
+/* Linear fader (vertical or horizontal) */
+function Slider({ value, onChange, min = 0, max = 1, orientation = 'vertical', length = 150, thickness = 40, label, format, center = false, highlight, disabled, ticks = 5, capColor }) {
+  const ref = useRef(null), drag = useRef(false);
+  const pad = 12, norm = (value - min) / (max - min), vertical = orientation === 'vertical';
+  const posFromEvent = e => {
+    const r = ref.current.getBoundingClientRect();
+    const n = vertical ? 1 - (e.clientY - r.top - pad) / (r.height - 2 * pad) : (e.clientX - r.left - pad) / (r.width - 2 * pad);
+    return clamp(n, 0, 1);
+  };
+  const set = n => onChange(min + n * (max - min));
+  const onPointerDown = e => { if (disabled) return; e.preventDefault(); ref.current.setPointerCapture(e.pointerId); drag.current = true; set(posFromEvent(e)); };
+  const onPointerMove = e => { if (drag.current) set(posFromEvent(e)); };
+  const onPointerUp = () => { drag.current = false; };
+  const onKeyDown = e => {
+    const step = (max - min) / (e.shiftKey ? 10 : 50);
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); onChange(clamp(value + step, min, max)); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); onChange(clamp(value - step, min, max)); }
+    else if (e.key === 'Home') onChange(min); else if (e.key === 'End') onChange(max);
+  };
+  const travel = length - 2 * pad;
+  const capPos = pad + (vertical ? (1 - norm) * travel : norm * travel);
+  const tickEls = Array.from({ length: ticks }, (_, i) => { const p = pad + (i / (ticks - 1)) * travel; return vertical
+    ? <span key={i} className="absolute left-1 right-1 h-px bg-line2" style={{ top: p }} />
+    : <span key={i} className="absolute top-1 bottom-1 w-px bg-line2" style={{ left: p }} />; });
+  const centerPos = center ? pad + (vertical ? (1 - (0 - min) / (max - min)) * travel : ((0 - min) / (max - min)) * travel) : null;
+  return (
+    <div className={cx('flex items-center gap-1 select-none', vertical ? 'flex-col' : 'flex-row')}>
+      {label && vertical && <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">{label}</div>}
+      <div ref={ref} role="slider" tabIndex={disabled ? -1 : 0} aria-label={label} aria-orientation={orientation} aria-valuemin={min} aria-valuemax={max} aria-valuenow={+value.toFixed(2)} aria-valuetext={format ? format(value) : undefined}
+        className={cx('slider relative rounded-lg border border-line bg-panel2', vertical ? 'fader-track' : 'fader-track-h', highlight && 'tour-target', disabled && 'opacity-50')}
+        style={vertical ? { width: thickness, height: length } : { width: length, height: thickness }}
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onKeyDown={onKeyDown}>
+        {tickEls}
+        {center && (vertical
+          ? <span className="absolute left-0 right-0 h-0.5 bg-neon/70" style={{ top: centerPos }} />
+          : <span className="absolute top-0 bottom-0 w-0.5 bg-neon/70" style={{ left: centerPos }} />)}
+        <span className="fader-cap absolute rounded-md" style={vertical
+          ? { left: 4, right: 4, height: 18, top: capPos - 9, borderTop: `2px solid ${capColor || 'var(--neon)'}` }
+          : { top: 4, bottom: 4, width: 18, left: capPos - 9, borderLeft: `2px solid ${capColor || 'var(--neon)'}` }} />
+      </div>
+      {format && <div className="font-mono text-[11px] text-fg/80 tabular">{format(value)}</div>}
+    </div>
+  );
+}
+
+function BeatLights({ beats, playing, size = 12 }) {
+  const beat = Math.floor(beats), inBar = ((beat % 4) + 4) % 4, lit = playing && frac(beats) < 0.5;
+  return (
+    <div className="flex items-center gap-1.5" aria-label={`Beat ${inBar + 1} of 4`}>
+      {[0, 1, 2, 3].map(i => (
+        <span key={i} className={cx('led', lit && i === inBar && (i === 0 ? 'one' : 'on'))} style={{ width: size, height: size }} />
+      ))}
+    </div>
+  );
+}
+
+/* ============================================================
+   Waveform (canvas, 3-band coloured like a pro DJ app)
+   ============================================================ */
+function drawWave(canvas, deck, xfGain, t) {
+  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+  const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#0c0f15'; ctx.fillRect(0, 0, w, h);
+  const headX = w * 0.3;
+  if (!deck.track) {
+    ctx.fillStyle = '#5f6880'; ctx.font = '600 11px JetBrains Mono, monospace'; ctx.textAlign = 'center';
+    ctx.fillText('NO TRACK LOADED', w / 2, h / 2 + 4); return;
+  }
+  const beats = beatsOf(deck, t), beatsVisible = 16, pxPerBeat = w / beatsVisible, firstBeat = beats - headX / pxPerBeat;
+  const stepW = pxPerBeat / 4;
+  const g = { low: bandGain(deck.eq.low), mid: bandGain(deck.eq.mid), high: bandGain(deck.eq.high) };
+  const vol = faderGain(deck.fader) * (0.35 + 0.65 * xfGain);
+  const mid = h / 2;
+  const s0 = Math.floor(firstBeat * 4) - 1, s1 = Math.ceil((firstBeat + beatsVisible) * 4) + 1;
+  for (let s = s0; s <= s1; s++) {
+    if (s < 0) continue;
+    const x = (s / 4 - firstBeat) * pxPerBeat, a = stepAmps(deck.track.pattern, s);
+    const hl = Math.min(1, a.low * g.low) * vol * h * 0.48, hm = Math.min(1, a.mid * g.mid) * vol * h * 0.34, hh = Math.min(1, a.high * g.high) * vol * h * 0.22;
+    ctx.fillStyle = 'rgba(255,122,89,.92)'; ctx.fillRect(x, mid - hl, stepW - 1, hl * 2);
+    ctx.fillStyle = 'rgba(95,224,165,.85)'; ctx.fillRect(x, mid - hm, stepW - 1, hm * 2);
+    ctx.fillStyle = 'rgba(124,199,255,.85)'; ctx.fillRect(x, mid - hh, stepW - 1, hh * 2);
+  }
+  for (let b = Math.ceil(firstBeat); b <= firstBeat + beatsVisible; b++) {
+    if (b < 0) continue;
+    const x = (b - firstBeat) * pxPerBeat;
+    if (b % 32 === 0) { ctx.strokeStyle = 'rgba(56,200,255,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      ctx.fillStyle = 'rgba(56,200,255,.95)'; ctx.font = '600 9px JetBrains Mono, monospace'; ctx.textAlign = 'left'; ctx.fillText('PHRASE ' + (b / 32 + 1), x + 4, 11); }
+    else if (b % 4 === 0) { ctx.strokeStyle = 'rgba(233,237,245,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+    else { ctx.strokeStyle = 'rgba(233,237,245,.1)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, h * 0.3); ctx.lineTo(x, h * 0.7); ctx.stroke(); }
+  }
+  ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(0, 0, headX, h);
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(headX, 0); ctx.lineTo(headX, h); ctx.stroke();
+}
+
+function Waveform({ deck, xfGain, now }) {
+  const ref = useRef(null);
+  useEffect(() => { if (ref.current) drawWave(ref.current, deck, xfGain, now); });
+  return <canvas ref={ref} className="wave-canvas" aria-label={`Deck ${deck.id} waveform`} />;
+}
+
+function PhraseStrip({ beats, highlight }) {
+  const beat = Math.floor(beats), inPhrase = ((beat % 32) + 32) % 32, bar = Math.floor(inPhrase / 4), phrase = Math.floor(beat / 32) + 1;
+  return (
+    <div className={cx('rounded-xl border border-line bg-panel2 px-3 py-2', highlight && 'tour-target')}>
+      <div className="mb-1.5 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+        <span>Phrase {phrase} · bar {bar + 1} of 8</span><span>32 beats</span>
+      </div>
+      <div className="grid grid-cols-8 gap-1">
+        {Array.from({ length: 8 }, (_, b) => (
+          <div key={b} className={cx('flex gap-0.5 rounded-md border p-0.5', b === bar ? 'border-neon/60' : 'border-line')}>
+            {[0, 1, 2, 3].map(k => { const idx = b * 4 + k; const on = idx < inPhrase || (idx === inPhrase); return (
+              <span key={k} className={cx('h-2 flex-1 rounded-sm', idx === inPhrase ? 'bg-neon' : on ? 'bg-neon/35' : 'bg-line')} />); })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   Deck, channel strip, mixer
+   ============================================================ */
+function TrackCard({ deck, tgt }) {
+  const t = deck.track;
+  if (!t) return <div className="rounded-xl border border-dashed border-line2 px-3 py-2 text-xs text-muted">No track loaded. Pick one from the crate.</div>;
+  const k = keyInfo(t.key);
+  return (
+    <div className="rounded-xl border border-line bg-panel2 px-3 py-2">
+      <div className="truncate text-sm font-bold">{t.title}</div>
+      <div className="truncate text-xs text-muted">{t.artist}</div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <Chip tone="neon" className={cx(tgt(deck.id + '.key') && 'tour-target')}><Icon name="KeyRound" size={11} />{t.key} · {k.name}</Chip>
+        <Chip>{t.bpm} BPM original</Chip>
+      </div>
+    </div>
+  );
+}
+
+function StructureStrip({ beats }) {
+  const bar = Math.floor(beats / 4), seg = Math.floor((((bar % 64) + 64) % 64) / 8);
+  return (
+    <div className="rounded-xl border border-line bg-panel2 px-3 py-2">
+      <div className="mb-1.5 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-muted"><span>Track structure</span><span>8 bars each</span></div>
+      <div className="grid grid-cols-8 gap-1">
+        {SECTIONS.flatMap(sec => { const from = SECTIONS.indexOf(sec) === 0 ? 0 : SECTIONS[SECTIONS.indexOf(sec) - 1].until; return Array.from({ length: (sec.until - from) / 8 }, (_, k) => ({ name: sec.name, idx: from / 8 + k, bass: sec.bass })); }).map(p => (
+          <div key={p.idx} title={`${p.name} · bars ${p.idx * 8 + 1}–${p.idx * 8 + 8}`} className={cx('h-5 rounded-md border text-center text-[8px] font-bold uppercase leading-5 tracking-wider', p.idx === seg ? 'border-neon bg-neon/25 text-neon' : p.idx < seg ? 'border-line2 bg-panel3 text-muted' : 'border-line text-dim')}>
+            {p.name.slice(0, 3)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DeckUnit({ deck, now, tgt, actions, syncDisabled, className = '' }) {
+  const id = deck.id, has = !!deck.track;
+  const beats = has ? beatsOf(deck, now) : 0, beat = Math.floor(beats);
+  const bar = Math.floor(beat / 4) + 1, inBar = ((beat % 4) + 4) % 4 + 1;
+  const bpm = has ? effBpm(deck) : 0, section = has ? sectionOf(Math.floor(beats / 4)) : null;
+  const capColor = id === 'A' ? 'var(--low)' : 'var(--high)';
+  return (
+    <Panel className={className} title={`Deck ${id}`} icon="Disc3"
+      right={<span className="flex items-center gap-2 text-[11px] text-muted"><span className={cx('led', deck.playing && 'on')} style={{ width: 9, height: 9 }} />{deck.playing ? 'Playing' : has ? 'Stopped' : 'Empty'}</span>}>
+      <div className="flex gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <TrackCard deck={deck} tgt={tgt} />
+          <div className={cx('flex items-end justify-between gap-2 rounded-xl border border-line bg-panel2 px-3 py-2', tgt(id + '.bpm') && 'tour-target')}>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">Tempo</div>
+              <div className="font-mono text-2xl font-semibold leading-none tabular">{has ? bpm.toFixed(1) : '--.-'}<span className="ml-1 text-xs text-muted">BPM</span></div>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">Pitch</div>
+              <div className="font-mono text-sm tabular">{pctLabel(deck.pitch)}</div>
+            </div>
+          </div>
+          <div className={cx('flex items-center justify-between gap-2 rounded-xl border border-line bg-panel2 px-3 py-2', tgt(id + '.counter') && 'tour-target')}>
+            <BeatLights beats={beats} playing={deck.playing} />
+            <div className="whitespace-nowrap font-mono text-xs tabular text-fg/90">{has ? <>BAR <b className="text-neon">{bar}</b> · BEAT <b className="text-neon">{inBar}</b></> : '--'}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button tone="ghost" icon="Crosshair" highlight={tgt(id + '.cue')} disabled={!has} onClick={() => actions.cue(id)} title="Stop and return to the cue point">CUE</Button>
+            <Button tone={deck.playing ? 'ok' : 'primary'} icon={deck.playing ? 'Pause' : 'Play'} highlight={tgt(id + '.play')} disabled={!has}
+              onClick={() => (deck.playing ? actions.pause(id) : actions.play(id))}>{deck.playing ? 'PAUSE' : 'PLAY'}</Button>
+            <div className={cx('col-span-2 grid grid-cols-[1fr_1fr_auto] gap-2 rounded-xl', tgt(id + '.nudge') && 'tour-target p-1')}>
+              <Button tone="ghost" size="sm" icon="ChevronLeft" disabled={!deck.playing} onClick={() => actions.nudge(id, -1 / 16)} title="Nudge back: beats land later">NUDGE</Button>
+              <Button tone="ghost" size="sm" disabled={!deck.playing} onClick={() => actions.nudge(id, 1 / 16)} title="Nudge forward: beats land earlier">NUDGE<Icon name="ChevronRight" size={14} /></Button>
+              <Button tone="subtle" size="sm" icon="Repeat" disabled={!has || syncDisabled} highlight={tgt(id + '.sync')} onClick={() => actions.sync(id)}
+                title={syncDisabled ? 'SYNC is switched off for this lesson. Match by hand.' : 'Match tempo and phase to the other deck'}>SYNC</Button>
+            </div>
+          </div>
+          {has && <StructureStrip beats={beats} />}
+        </div>
+        <Slider value={deck.pitch} onChange={v => actions.setPitch(id, v)} min={-8} max={8} orientation="vertical" length={236} thickness={38}
+          label="Pitch" format={pctLabel} center highlight={tgt(id + '.pitch')} disabled={!has} capColor={capColor} ticks={9} />
+      </div>
+    </Panel>
+  );
+}
+
+function LevelMeter({ level }) {
+  const segs = 10;
+  return (
+    <div className="flex h-[150px] w-3 flex-col-reverse gap-0.5 rounded-sm" aria-hidden="true">
+      {Array.from({ length: segs }, (_, i) => {
+        const on = level * segs > i;
+        const color = i >= 8 ? 'var(--bad)' : i >= 6 ? 'var(--warn)' : 'var(--ok)';
+        return <span key={i} className="flex-1 rounded-sm" style={{ background: on ? color : '#1b202b', boxShadow: on ? `0 0 6px ${color}` : 'none' }} />;
+      })}
+    </div>
+  );
+}
+
+function ChannelStrip({ deck, tgt, actions, level }) {
+  const id = deck.id;
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-line bg-panel2 px-2 py-3">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">CH {id}</div>
+      <Knob value={deck.eq.high} onChange={v => actions.setEq(id, 'high', v)} label="High" color="var(--high)" highlight={tgt(id + '.eq.high')} />
+      <Knob value={deck.eq.mid} onChange={v => actions.setEq(id, 'mid', v)} label="Mid" color="var(--mid)" highlight={tgt(id + '.eq.mid')} />
+      <Knob value={deck.eq.low} onChange={v => actions.setEq(id, 'low', v)} label="Low" color="var(--low)" highlight={tgt(id + '.eq.low')} />
+      <div className="flex items-end gap-2">
+        <Slider value={deck.fader} onChange={v => actions.setFader(id, v)} orientation="vertical" length={150} thickness={36} label="Fader" format={v => Math.round(v * 100) + '%'} highlight={tgt(id + '.fader')} ticks={6} />
+        <div className="pb-[22px]"><LevelMeter level={level} /></div>
+      </div>
+    </div>
+  );
+}
+
+function TempoMeter({ sim, now, highlight }) {
+  const s = tempoStatus(sim, now);
+  const needle = clamp(s.dBpm / 4, -1, 1), phaseNeedle = clamp(s.phase * 2, -1, 1);
+  const status = !s.both ? { text: 'Start both decks', tone: 'muted' } : s.locked ? { text: 'LOCKED', tone: 'ok' } : s.tempoOk ? { text: 'Tempo OK · nudge', tone: 'warn' } : { text: `Drifting ${s.dBpm > 0 ? '+' : ''}${s.dBpm.toFixed(1)} BPM`, tone: 'bad' };
+  return (
+    <div className={cx('rounded-xl border border-line bg-panel2 px-3 py-2', highlight && 'tour-target')}>
+      <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-muted"><span>Tempo</span><span className="font-mono normal-case tracking-normal tabular">{s.dBpm > 0 ? '+' : ''}{s.dBpm.toFixed(1)}</span></div>
+      <Gauge value={needle} color={s.tempoOk ? 'var(--ok)' : 'var(--warn)'} />
+      <div className="mt-2 mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-muted"><span>Beat phase</span><span className="font-mono normal-case tracking-normal tabular">{s.both ? (s.phase >= 0 ? '+' : '') + s.phase.toFixed(2) : '—'}</span></div>
+      <Gauge value={phaseNeedle} color={s.locked ? 'var(--ok)' : 'var(--neon)'} />
+      <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+        <span className="flex items-center gap-1.5">A<BeatLights beats={sim.decks.A.track ? beatsOf(sim.decks.A, now) : 0} playing={sim.decks.A.playing} size={9} /></span>
+        <span className="flex items-center gap-1.5"><BeatLights beats={sim.decks.B.track ? beatsOf(sim.decks.B, now) : 0} playing={sim.decks.B.playing} size={9} />B</span>
+      </div>
+      <div className="mt-2 flex justify-center"><Chip tone={status.tone} className="whitespace-nowrap">{status.text}</Chip></div>
+    </div>
+  );
+}
+function Gauge({ value, color }) {
+  return (
+    <div className="relative h-2.5 rounded-full bg-panel3">
+      <span className="absolute left-1/2 top-0 h-full w-px bg-line2" />
+      <span className="absolute top-0 h-full w-1.5 rounded-full" style={{ left: `calc(50% + ${value * 46}% - 3px)`, background: color, boxShadow: `0 0 8px ${color}` }} />
+    </div>
+  );
+}
+
+function MudMeter({ sim, highlight }) {
+  const lv = bassLevels(sim), mud = Math.min(lv.A, lv.B);
+  const state = mud < 0.2 ? { text: 'CLEAN', tone: 'ok', color: 'var(--ok)' } : mud < 0.5 ? { text: 'BUSY', tone: 'warn', color: 'var(--warn)' } : { text: 'MUDDY', tone: 'bad', color: 'var(--bad)' };
+  const owner = lv.A < 0.15 && lv.B < 0.15 ? 'none' : lv.A > lv.B * 1.5 ? 'Deck A' : lv.B > lv.A * 1.5 ? 'Deck B' : 'both';
+  return (
+    <div className={cx('rounded-xl border border-line bg-panel2 px-3 py-2', highlight && 'tour-target')}>
+      <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-muted"><span>Bass clash</span><Chip tone={state.tone}>{state.text}</Chip></div>
+      <div className="h-2.5 overflow-hidden rounded-full bg-panel3"><div className="h-full rounded-full transition-[width] duration-100" style={{ width: `${Math.round(mud * 100)}%`, background: state.color, boxShadow: `0 0 8px ${state.color}` }} /></div>
+      <div className="mt-1.5 flex flex-col gap-0.5 text-[11px] text-muted"><span>Bass from: <b className="text-fg">{owner}</b></span><span className="font-mono tabular">A {Math.round(lv.A * 100)} · B {Math.round(lv.B * 100)}</span></div>
+    </div>
+  );
+}
+
+function Mixer({ sim, now, tgt, actions, levels, className = '' }) {
+  return (
+    <Panel title="Mixer" icon="SlidersHorizontal" className={className}>
+      <div className="flex items-start justify-center gap-3">
+        <ChannelStrip deck={sim.decks.A} tgt={tgt} actions={actions} level={levels.A} />
+        <div className="flex w-[160px] flex-col gap-2">
+          <TempoMeter sim={sim} now={now} highlight={tgt('phase')} />
+          <MudMeter sim={sim} highlight={tgt('mud')} />
+        </div>
+        <ChannelStrip deck={sim.decks.B} tgt={tgt} actions={actions} level={levels.B} />
+      </div>
+      <div className="mt-3 flex flex-col items-center gap-1">
+        <Slider value={sim.xf} onChange={actions.setXf} orientation="horizontal" length={300} thickness={38} highlight={tgt('xf')} ticks={9} center={false} />
+        <div className="flex w-[300px] max-w-full justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-muted"><span>Deck A</span><span>Crossfader</span><span>Deck B</span></div>
+      </div>
+    </Panel>
+  );
+}
+
+function outputLevels(sim, t, smooth) {
+  const xg = xfGains(sim.xf), out = {};
+  for (const id of ['A', 'B']) {
+    const d = sim.decks[id]; let lv = 0;
+    if (d.track && d.playing) {
+      const step = Math.floor(beatsOf(d, t) * 4), a = stepAmps(d.track.pattern, step);
+      lv = ((a.low * bandGain(d.eq.low) + a.mid * bandGain(d.eq.mid) + a.high * bandGain(d.eq.high)) / 3) * faderGain(d.fader) * xg[id];
+    }
+    const prev = smooth.current[id] || 0;
+    out[id] = smooth.current[id] = lv > prev ? lv : prev * 0.85 + lv * 0.15;
+  }
+  return out;
+}
+
+function Controller({ sim, now, tgt, actions, syncDisabled }) {
+  const smooth = useRef({});
+  const levels = outputLevels(sim, now, smooth);
+  const xg = xfGains(sim.xf);
+  return (
+    <div className="flex flex-col gap-3">
+      <Panel title="Waveforms" icon="Waves" right={<span className="flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted"><span className="flex items-center gap-1"><i className="h-2 w-2 rounded-sm bg-low" />Low</span><span className="flex items-center gap-1"><i className="h-2 w-2 rounded-sm bg-mid" />Mid</span><span className="flex items-center gap-1"><i className="h-2 w-2 rounded-sm bg-high" />High</span></span>}>
+        <div className="flex flex-col gap-2">
+          {['A', 'B'].map(id => { const d = sim.decks[id]; const sec = d.track ? sectionOf(Math.floor(beatsOf(d, now) / 4)) : null; return (
+            <div key={id} className="relative h-[76px] overflow-hidden rounded-xl border border-line">
+              <Waveform deck={d} xfGain={xg[id]} now={now} />
+              <div className="pointer-events-none absolute left-2 top-1.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em]">
+                <span className="rounded bg-bg/70 px-1.5 py-0.5 text-fg">Deck {id}</span>
+                {sec && <span className="rounded bg-bg/70 px-1.5 py-0.5 text-neon">{sec.name}</span>}
+              </div>
+            </div>); })}
+          <PhraseStrip beats={sim.decks.A.track ? beatsOf(sim.decks.A, now) : 0} highlight={tgt('A.phrase')} />
+        </div>
+      </Panel>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        <DeckUnit deck={sim.decks.A} now={now} tgt={tgt} actions={actions} syncDisabled={syncDisabled} className="xl:order-1 xl:self-start" />
+        <DeckUnit deck={sim.decks.B} now={now} tgt={tgt} actions={actions} syncDisabled={syncDisabled} className="xl:order-3 xl:self-start" />
+        <Mixer sim={sim} now={now} tgt={tgt} actions={actions} levels={levels} className="md:col-span-2 xl:col-span-1 xl:order-2" />
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   Camelot wheel + crate (Lesson 4)
+   ============================================================ */
+function sectorPath(cxp, cyp, r0, r1, a0, a1) {
+  const p = (r, a) => [cxp + r * Math.cos((a * Math.PI) / 180), cyp + r * Math.sin((a * Math.PI) / 180)];
+  const [x0, y0] = p(r1, a0), [x1, y1] = p(r1, a1), [x2, y2] = p(r0, a1), [x3, y3] = p(r0, a0);
+  return `M${x0},${y0} A${r1},${r1} 0 0 1 ${x1},${y1} L${x2},${y2} A${r0},${r0} 0 0 0 ${x3},${y3} Z`;
+}
+function CamelotWheel({ current, picks, onPick, highlight }) {
+  const C = 150;
+  const segs = [];
+  for (let n = 1; n <= 12; n++) {
+    const a0 = n * 30 - 90 - 15 + 1, a1 = n * 30 - 90 + 15 - 1, mid = n * 30 - 90;
+    for (const [l, r0, r1] of [['B', 102, 142], ['A', 58, 98]]) {
+      const key = `${n}${l}`, isCur = key === current, comp = current && compatibleKeys(current, key), picked = picks.includes(key);
+      const rm = (r0 + r1) / 2, tx = C + rm * Math.cos((mid * Math.PI) / 180), ty = C + rm * Math.sin((mid * Math.PI) / 180);
+      segs.push(
+        <g key={key} onClick={() => onPick(key)} className="cursor-pointer" role="button" aria-label={`${key} ${keyInfo(key).name}`} tabIndex={0}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(key); } }}>
+          <path d={sectorPath(C, C, r0, r1, a0, a1)}
+            fill={isCur ? 'var(--neon)' : picked ? 'rgba(61,220,151,.35)' : comp ? 'rgba(56,200,255,.18)' : 'var(--panel-3)'}
+            stroke={picked ? 'var(--ok)' : isCur ? 'var(--neon)' : 'var(--line-2)'} strokeWidth={picked || isCur ? 2 : 1} />
+          <text x={tx} y={ty + 4} textAnchor="middle" fontSize={l === 'B' ? 12 : 11} fontWeight="700" fontFamily="JetBrains Mono, monospace"
+            fill={isCur ? '#0a0c11' : comp || picked ? '#e9edf5' : '#8d96aa'}>{key}</text>
+        </g>
+      );
+    }
+  }
+  return (
+    <div className={cx('rounded-xl border border-line bg-panel2 p-2', highlight && 'tour-target')}>
+      <svg viewBox="0 0 300 300" className="mx-auto block w-full max-w-[320px]" aria-label="Camelot wheel">
+        {segs}
+        <circle cx={C} cy={C} r={54} fill="var(--panel)" stroke="var(--line-2)" />
+        <text x={C} y={C - 6} textAnchor="middle" fontSize="10" fill="#8d96aa" fontFamily="Manrope, sans-serif" fontWeight="700" letterSpacing="2">DECK A</text>
+        <text x={C} y={C + 16} textAnchor="middle" fontSize="20" fill="#38c8ff" fontFamily="JetBrains Mono, monospace" fontWeight="600">{current || '—'}</text>
+      </svg>
+      <div className="mt-1 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[10px] uppercase tracking-[0.18em] text-muted">
+        <span>Inner ring = A = minor</span><span>Outer ring = B = major</span>
+      </div>
+    </div>
+  );
+}
+
+function Crate({ currentKey, deckB, onLoad, highlight }) {
+  return (
+    <div className={cx('flex flex-col gap-2 rounded-xl border border-line bg-panel2 p-2', highlight && 'tour-target')}>
+      {CRATE.map(id => {
+        const t = TRACKS[id], loaded = deckB.track && deckB.track.id === id, k = keyInfo(t.key);
+        const comp = currentKey ? compatibleKeys(currentKey, t.key) : null;
+        return (
+          <div key={id} className={cx('flex items-center justify-between gap-2 rounded-lg border px-3 py-2', loaded ? (comp ? 'border-ok/60 bg-ok/5' : 'border-bad/60 bg-bad/5') : 'border-line bg-panel')}>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-bold">{t.title}</div>
+              <div className="truncate text-xs text-muted">{t.artist} · {t.bpm} BPM</div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Chip tone={loaded ? (comp ? 'ok' : 'bad') : 'fg'} className="font-mono">{t.key}<span className="hidden sm:inline font-body font-normal text-muted"> · {k.root} {k.l === 'A' ? 'min' : 'maj'}</span></Chip>
+              {loaded ? <Chip tone={comp ? 'ok' : 'bad'}>{comp ? 'In key' : 'Clash'}</Chip>
+                : <Button size="sm" tone="ghost" onClick={() => onLoad(t)}>Load B</Button>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ============================================================
+   Lesson view: concepts, "Follow Me" instructor, controller, knowledge check
+   ============================================================ */
+const ConceptCards = React.memo(function ConceptCards({ lesson }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {lesson.concepts.map(c => (
+        <div key={c.term} className="rounded-2xl border border-line bg-panel p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-panel3" style={{ color: c.color || 'var(--neon)' }}><Icon name={c.icon} size={16} /></span>
+            <div className="text-sm font-bold" style={{ color: c.color || 'inherit' }}>{c.term}</div>
+          </div>
+          <p className="text-[13px] leading-relaxed text-muted">{c.text}</p>
+        </div>
+      ))}
+    </div>
+  );
+});
+
+function Instructor({ lesson, tour, steps, onStart, onNext, onRestart, tourDoneBefore }) {
+  const step = steps[tour.step];
+  if (!tour.active) {
+    return (
+      <Panel className="border-neon/30 bg-gradient-to-br from-panel to-panel2">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-neon/15 text-neon"><Icon name="MousePointerClick" size={22} /></span>
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neon">Follow Me · guided tour</div>
+              <h3 className="font-display text-base font-semibold">{tourDoneBefore ? 'Replay the tour any time' : 'Learn it on the controller below'}</h3>
+              <p className="mt-1 max-w-prose text-[13px] text-muted">I will light up each knob or fader in blue and tell you what to do. Try the move yourself, or press Next Step and I will perform it so you can watch the result. Sound is optional but recommended.</p>
+            </div>
+          </div>
+          <Button tone="primary" size="lg" icon="Play" onClick={onStart} className="shrink-0">Start Lesson Guided Tour</Button>
+        </div>
+      </Panel>
+    );
+  }
+  if (tour.finished) {
+    return (
+      <Panel className="border-ok/40">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-xl bg-ok/15 text-ok"><Icon name="CheckCircle2" size={22} /></span>
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ok">Tour complete</div>
+              <h3 className="font-display text-base font-semibold">You did the whole {lesson.title.toLowerCase()} routine.</h3>
+              <p className="mt-1 text-[13px] text-muted">Keep playing with the controller, or pass the three-question knowledge check below to finish the lesson.</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button tone="ghost" icon="RotateCcw" onClick={onRestart}>Replay</Button>
+            <Button tone="ok" icon="ListChecks" onClick={() => document.getElementById('knowledge-check')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Knowledge check</Button>
+          </div>
+        </div>
+      </Panel>
+    );
+  }
+  const done = tour.state === 'done';
+  return (
+    <Panel className={cx('border-neon/40 shadow-xl shadow-black/40', done && 'border-ok/50')}>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Chip tone="neon">Step {tour.step + 1} of {steps.length}</Chip>
+            <div className="flex items-center gap-1" aria-hidden="true">
+              {steps.map((_, i) => <span key={i} className={cx('h-1.5 rounded-full transition-all', i < tour.step ? 'w-4 bg-ok' : i === tour.step ? 'w-6 bg-neon' : 'w-3 bg-line2')} />)}
+            </div>
+          </div>
+          <Button tone="subtle" size="sm" icon="RotateCcw" onClick={onRestart}>Restart tour</Button>
+        </div>
+        <div className="flex items-start gap-3">
+          <span className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-xl', done ? 'bg-ok/15 text-ok' : 'bg-neon/15 text-neon')}><Icon name={done ? 'Check' : 'Hand'} size={20} /></span>
+          <div className="min-w-0">
+            <h3 className="font-display text-base font-semibold">{step.title}</h3>
+            <p className="mt-1 max-w-prose text-[13px] leading-relaxed sm:text-[14px]">{step.text}</p>
+            {step.tip && !done && <p className="mt-2 hidden items-start gap-1.5 text-[13px] text-muted sm:flex"><Icon name="Lightbulb" size={14} className="mt-0.5 shrink-0 text-warn" />{step.tip}</p>}
+            {done && <p className="mt-2 flex items-start gap-1.5 text-[13px] font-semibold text-ok rise"><Icon name="Sparkles" size={14} className="mt-0.5 shrink-0" />{tour.feedback || 'Done. Moving on…'}</p>}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
+          <Button tone="primary" icon={tour.auto ? 'Timer' : 'ChevronRight'} disabled={tour.auto || done} onClick={onNext}>
+            {tour.auto ? 'Watch…' : step.goal ? 'Next Step' : 'Got it, next'}
+          </Button>
+          <span className="hidden text-xs text-muted sm:inline">
+            {tour.auto ? 'Performing the move for you. Watch the highlighted control and the waveforms.' : step.goal ? (step.run ? 'Try it yourself on the highlighted control, or press Next Step and I will do it.' : (step.waiting || 'This step completes on its own as the track plays.')) : 'Read, then continue.'}
+          </span>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function Quiz({ questions, onPass, passed }) {
+  const [i, setI] = useState(0), [picked, setPicked] = useState(null), [score, setScore] = useState(0), [finished, setFinished] = useState(false);
+  const [retake, setRetake] = useState(false);
+  const q = questions[i];
+  const reset = () => { setI(0); setPicked(null); setScore(0); setFinished(false); };
+  const choose = idx => { if (picked !== null) return; setPicked(idx); if (idx === q.answer) setScore(s => s + 1); };
+  const next = () => {
+    if (i + 1 >= questions.length) { setFinished(true); if (score === questions.length) onPass(); }
+    else { setI(i + 1); setPicked(null); }
+  };
+  if (finished) {
+    const all = score === questions.length;
+    return (
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between rise">
+        <div className="flex items-center gap-3">
+          <span className={cx('grid h-10 w-10 place-items-center rounded-xl', all ? 'bg-ok/15 text-ok' : 'bg-warn/15 text-warn')}><Icon name={all ? 'Trophy' : 'RotateCcw'} size={20} /></span>
+          <div><div className="font-semibold">{all ? 'Perfect score. Lesson complete.' : `${score} of ${questions.length} correct`}</div><div className="text-sm text-muted">{all ? (passed ? 'Still sharp. Pick the next lesson in the roadmap.' : 'The next lesson is unlocked in the roadmap.') : 'All three need to be right. Re-read the explanations and try again.'}</div></div>
+        </div>
+        <Button tone={all ? 'ghost' : 'primary'} size="sm" icon="RotateCcw" onClick={() => { reset(); setRetake(true); }}>{all ? 'Retake' : 'Try again'}</Button>
+      </div>
+    );
+  }
+  if (passed && !retake) {
+    return (
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-ok/15 text-ok"><Icon name="Trophy" size={20} /></span><div><div className="font-semibold">Lesson complete</div><div className="text-sm text-muted">You passed the knowledge check. Take it again any time for practice.</div></div></div>
+        <Button tone="ghost" size="sm" icon="RotateCcw" onClick={() => { reset(); setRetake(true); }}>Retake</Button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between"><Chip tone="neon">Question {i + 1} of {questions.length}</Chip><span className="text-xs text-muted">{score} correct so far</span></div>
+      <div className="text-[15px] font-semibold">{q.q}</div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {q.options.map((o, idx) => {
+          const isAns = idx === q.answer, isPick = idx === picked;
+          const tone = picked === null ? 'border-line2 bg-panel2 hover:border-neon/60' : isAns ? 'border-ok bg-ok/10' : isPick ? 'border-bad bg-bad/10' : 'border-line opacity-60';
+          return (
+            <button key={idx} type="button" onClick={() => choose(idx)} disabled={picked !== null}
+              className={cx('flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors', tone)}>
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-panel3 font-mono text-xs">{String.fromCharCode(65 + idx)}</span>{o}
+              {picked !== null && isAns && <Icon name="Check" size={16} className="ml-auto text-ok" />}
+              {picked !== null && isPick && !isAns && <Icon name="X" size={16} className="ml-auto text-bad" />}
+            </button>
+          );
+        })}
+      </div>
+      {picked !== null && (
+        <div className="flex flex-col items-start gap-2 rounded-xl border border-line bg-panel2 p-3 sm:flex-row sm:items-center sm:justify-between rise">
+          <p className="text-sm"><b className={picked === q.answer ? 'text-ok' : 'text-bad'}>{picked === q.answer ? 'Correct. ' : 'Not quite. '}</b><span className="text-muted">{q.why}</span></p>
+          <Button tone="primary" size="sm" icon="ChevronRight" onClick={next}>{i + 1 >= questions.length ? 'See result' : 'Next question'}</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const getPath = (sim, path) => {
+  if (path === 'xf') return sim.xf;
+  const [id, a, b] = path.split('.');
+  return a === 'eq' ? sim.decks[id].eq[b] : sim.decks[id][a];
+};
+
+function useSim(initial) {
+  const [sim, setSim] = useState(initial);
+  const simRef = useRef(sim); simRef.current = sim;
+  const setDeck = useCallback((id, patch) => setSim(s => { const d = s.decks[id]; const nd = typeof patch === 'function' ? patch(d, s) : { ...d, ...patch }; return nd === d ? s : { ...s, decks: { ...s.decks, [id]: nd } }; }), []);
+  const actions = useMemo(() => ({
+    setDeck,
+    play: id => { engine.ensure(); setDeck(id, (d, s) => {
+      if (!d.track || d.playing) return d;
+      const t = nowMs(); let off = d.offsetBeats;
+      const o = s.decks[id === 'A' ? 'B' : 'A'];
+      if (d.autoSync && o.track && o.playing) off = Math.floor(off) + frac(beatsOf(o, t));
+      return { ...d, playing: true, startedAt: t, offsetBeats: off }; }); },
+    pause: id => setDeck(id, d => (d.playing ? { ...d, playing: false, offsetBeats: beatsOf(d, nowMs()) } : d)),
+    cue: id => setDeck(id, d => ({ ...d, playing: false, offsetBeats: d.cueBeats })),
+    nudge: (id, amt) => setDeck(id, d => { const r = rebase(d, nowMs()); return { ...r, offsetBeats: r.offsetBeats + amt }; }),
+    setPitch: (id, v) => setDeck(id, d => ({ ...rebase(d, nowMs()), pitch: clamp(v, -8, 8) })),
+    setEq: (id, band, v) => setDeck(id, d => ({ ...d, eq: { ...d.eq, [band]: clamp(v, -1, 1) } })),
+    setFader: (id, v) => setDeck(id, d => ({ ...d, fader: clamp(v, 0, 1) })),
+    setXf: v => setSim(s => ({ ...s, xf: clamp(v, 0, 1) })),
+    sync: id => setDeck(id, (d, s) => {
+      const o = s.decks[id === 'A' ? 'B' : 'A']; if (!d.track || !o.track) return d;
+      const t = nowMs(); const nd = { ...rebase(d, t), pitch: clamp(pitchFor(effBpm(o), d.track.bpm), -8, 8) };
+      if (d.playing && o.playing) nd.offsetBeats = Math.floor(nd.offsetBeats) + frac(beatsOf(o, t));
+      return nd; }),
+    load: (id, track) => setDeck(id, (d, s) => {
+      const o = s.decks[id === 'A' ? 'B' : 'A'];
+      const pitch = d.autoSync && o.track ? clamp(pitchFor(effBpm(o), track.bpm), -8, 8) : 0;
+      return { ...d, track, playing: false, offsetBeats: 64, cueBeats: 64, pitch }; }),
+    setPath: (path, v) => {
+      if (path === 'xf') return actions.setXf(v);
+      const [id, a, b] = path.split('.');
+      if (a === 'eq') return actions.setEq(id, b, v);
+      if (a === 'fader') return actions.setFader(id, v);
+      if (a === 'pitch') return actions.setPitch(id, v);
+    },
+    stopAll: () => setSim(s => ({ ...s, decks: { A: { ...s.decks.A, playing: false, offsetBeats: beatsOf(s.decks.A, nowMs()) }, B: { ...s.decks.B, playing: false, offsetBeats: beatsOf(s.decks.B, nowMs()) } } })),
+  }), [setDeck]);
+  return [sim, setSim, simRef, actions];
+}
+
+function useFrameLoop(fps = 30) {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    let raf, last = 0; const gap = 1000 / fps;
+    const loop = t => { raf = requestAnimationFrame(loop); if (t - last < gap) return; last = t; setFrame(f => f + 1); };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [fps]);
+  return frame;
+}
+
+function LessonView({ lesson, progress, act, notify }) {
+  const [sim, setSim, simRef, actions] = useSim(() => lesson.setup());
+  const frame = useFrameLoop(30);
+  const now = nowMs();
+  const [tour, setTour] = useState({ active: false, step: 0, state: 'active', auto: false, finished: false, startBeats: 0, feedback: '' });
+  const [picks, setPicks] = useState([]);
+  const picksRef = useRef(picks); picksRef.current = picks;
+  const [lastKey, setLastKey] = useState(null);
+  const tourRef = useRef(tour); tourRef.current = tour;
+  const mounted = useRef(true), stickyRef = useRef(null);
+  const steps = lesson.steps;
+  const lp = progress.lessons[lesson.id];
+
+  useEffect(() => { mounted.current = true; engine.bind(() => simRef.current); return () => { mounted.current = false; engine.unbind(); }; }, []);
+
+  const tgt = useCallback(id => tour.active && !tour.finished && tour.state === 'active' && steps[tour.step].targets.includes(id), [tour, steps]);
+
+  useEffect(() => {
+    if (!tour.active || tour.finished || tour.state !== 'active') return;
+    const el = document.querySelector('.tour-target'); if (!el) return;
+    const panelBottom = stickyRef.current ? stickyRef.current.getBoundingClientRect().bottom : 0;
+    const r = el.getBoundingClientRect();
+    const visible = r.top >= panelBottom + 8 && r.bottom <= window.innerHeight - 8;
+    if (!visible) window.scrollTo({ top: window.scrollY + r.top - panelBottom - 20, behavior: 'smooth' });
+  }, [tour.step, tour.active]);
+
+  const beginStep = (idx, prev) => {
+    const s = simRef.current, t = nowMs();
+    const beatsA = s.decks.A.track ? beatsOf(s.decks.A, t) : 0;
+    return { ...prev, active: true, finished: false, step: idx, state: 'active', auto: false, startBeats: beatsA, feedback: '' };
+  };
+  const startTour = () => {
+    engine.ensure();
+    setSim(lesson.setup()); setPicks([]);
+    setTimeout(() => setTour(p => beginStep(0, p)), 0);
+  };
+  const restartTour = () => startTour();
+  const advance = () => {
+    const t = tourRef.current;
+    if (t.step + 1 >= steps.length) {
+      setTour(p => ({ ...p, finished: true, state: 'active', auto: false }));
+      act({ type: 'tour', id: lesson.id });
+      notify('Guided tour complete. Take the knowledge check to finish the lesson.', 'ok', 'CheckCircle2');
+    } else setTour(p => beginStep(t.step + 1, p));
+  };
+  const completeStep = ctx => {
+    const step = steps[tourRef.current.step];
+    const feedback = step.onMet ? step.onMet(ctx) : 'Nice. That is exactly it.';
+    setTour(p => ({ ...p, state: 'done', feedback }));
+    setTimeout(() => { if (mounted.current && tourRef.current.state === 'done') advance(); }, 1300);
+  };
+
+  // Goal detection: runs every frame while a step is active and the user is in control
+  useEffect(() => {
+    const t = tourRef.current;
+    if (!t.active || t.finished || t.state !== 'active' || t.auto) return;
+    const step = steps[t.step]; if (!step.goal) return;
+    const s = simRef.current, tm = nowMs();
+    const ctx = { sim: s, now: tm, beatsA: s.decks.A.track ? beatsOf(s.decks.A, tm) : 0, beatsB: s.decks.B.track ? beatsOf(s.decks.B, tm) : 0, startBeats: t.startBeats, picks: picksRef.current };
+    if (step.goal(ctx)) completeStep(ctx);
+  }, [frame]);
+
+  const api = useMemo(() => ({
+    play: id => actions.play(id),
+    setPath: actions.setPath,
+    sleep,
+    tween: (path, to, ms) => new Promise(res => {
+      const from = getPath(simRef.current, path), t0 = nowMs();
+      const step = () => { if (!mounted.current) return res(); const k = clamp((nowMs() - t0) / ms, 0, 1); actions.setPath(path, lerp(from, to, easeInOut(k))); if (k < 1) requestAnimationFrame(step); else res(); };
+      requestAnimationFrame(step);
+    }),
+    waitForBeatOne: id => new Promise(res => {
+      const d = simRef.current.decks[id]; if (!d.playing) return res();
+      const b = beatsOf(d, nowMs()), next = Math.ceil(b / 4) * 4; setTimeout(res, Math.max(0, ((next - b) / effBpm(d)) * 60000 - 20));
+    }),
+    alignPhase: id => { const s = simRef.current, o = id === 'A' ? 'B' : 'A', t = nowMs(); const bo = beatsOf(s.decks[o], t); actions.setDeck(id, d => { const r = rebase(d, t); return { ...r, offsetBeats: Math.floor(r.offsetBeats) + frac(bo) }; }); return sleep(400); },
+    pickKeys: async keys => { for (const k of keys) { setPicks(p => (p.includes(k) ? p : [...p, k])); setLastKey(k); await sleep(400); } },
+    load: (id, trackId) => { actions.load(id, TRACKS[trackId]); return sleep(400); },
+  }), [actions]);
+
+  const nextStep = async () => {
+    const t = tourRef.current; if (t.auto || t.state !== 'active') return;
+    const step = steps[t.step];
+    if (step.run) {
+      setTour(p => ({ ...p, auto: true }));
+      try { await step.run(api); } catch (e) { /* ignore */ }
+      if (!mounted.current || tourRef.current.step !== t.step) return;
+      const s = simRef.current, tm = nowMs();
+      const ctx = { sim: s, now: tm, beatsA: s.decks.A.track ? beatsOf(s.decks.A, tm) : 0, beatsB: 0, startBeats: t.startBeats, picks: picksRef.current };
+      setTour(p => ({ ...p, auto: false }));
+      completeStep(ctx);
+    } else advance();
+  };
+
+  const onPickKey = key => {
+    setLastKey(key);
+    const cur = sim.decks.A.track ? sim.decks.A.track.key : null;
+    const t = tourRef.current, wheelStep = t.active && !t.finished && steps[t.step].targets.includes('wheel') && !!steps[t.step].goal;
+    if (cur && key === cur) return;
+    if (cur && !compatibleKeys(cur, key)) { if (wheelStep) notify(`${key} is ${keyRelation(cur, key).toLowerCase()} with ${cur}. Not that one.`, 'bad', 'X'); return; }
+    setPicks(p => (p.includes(key) ? p.filter(k => k !== key) : [...p, key]));
+  };
+  const onLoadTrack = track => {
+    actions.load('B', track);
+    const cur = sim.decks.A.track ? sim.decks.A.track.key : null;
+    if (cur) notify(compatibleKeys(cur, track.key) ? `${track.title} is in ${track.key}: ${keyRelation(cur, track.key).toLowerCase()}. Good pick.` : `${track.title} is in ${track.key}: ${keyRelation(cur, track.key).toLowerCase()} with ${cur}. Try another.`, compatibleKeys(cur, track.key) ? 'ok' : 'bad');
+  };
+
+  const curKey = sim.decks.A.track ? sim.decks.A.track.key : null;
+  return (
+    <div className="flex flex-col gap-5">
+      <header className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Chip tone="neon">Lesson {lesson.id} of {LESSONS.length}</Chip>
+          {lp.done ? <Chip tone="ok"><Icon name="Check" size={11} />Complete</Chip> : lp.tour ? <Chip tone="warn">Tour done · quiz pending</Chip> : <Chip>In progress</Chip>}
+        </div>
+        <h1 className="font-display text-2xl font-bold sm:text-3xl">{lesson.title}</h1>
+        <p className="max-w-prose text-[15px] text-muted">{lesson.subtitle}. {lesson.intro}</p>
+      </header>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">1 · Learn the idea</h2>
+        <ConceptCards lesson={lesson} />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">2 · Follow me on the controller</h2>
+        <div ref={stickyRef} className={cx(tour.active && !tour.finished && 'sticky z-20')} style={{ top: 'calc(env(safe-area-inset-top, 0px) + 54px)' }}>
+          <Instructor lesson={lesson} tour={tour} steps={steps} onStart={startTour} onNext={nextStep} onRestart={restartTour} tourDoneBefore={lp.tour} />
+        </div>
+        <Controller sim={sim} now={now} tgt={tgt} actions={actions} syncDisabled={lesson.id === 2} />
+        {lesson.id === 4 && (
+          <div className="grid gap-3 lg:grid-cols-2">
+            <Panel title="Camelot wheel" icon="Compass" right={lastKey && curKey && <Chip tone={compatibleKeys(curKey, lastKey) ? 'ok' : 'bad'}>{lastKey} · {keyInfo(lastKey).name} · {keyRelation(curKey, lastKey)}</Chip>}>
+              <CamelotWheel current={curKey} picks={picks} onPick={onPickKey} highlight={tgt('wheel')} />
+            </Panel>
+            <Panel title="Crate · load onto Deck B" icon="Layers">
+              <Crate currentKey={curKey} deckB={sim.decks.B} onLoad={onLoadTrack} highlight={tgt('crate')} />
+            </Panel>
+          </div>
+        )}
+      </section>
+
+      <section id="knowledge-check" className="flex flex-col gap-3 scroll-mt-4">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">3 · Knowledge check</h2>
+        <Panel>
+          {lp.tour || tour.finished
+            ? <Quiz key={lesson.id} questions={lesson.quiz} passed={lp.done} onPass={() => { act({ type: 'quiz', id: lesson.id }); }} />
+            : <div className="flex items-center gap-3 text-muted"><Icon name="Lock" size={18} /><span>Finish the guided tour above to unlock the three-question check. Pass it to complete the lesson{lesson.id < 4 ? ' and unlock the next one' : ''}.</span></div>}
+        </Panel>
+      </section>
+    </div>
+  );
+}
+
+/* ============================================================
+   Drill 1: Phrase Drop Challenge
+   ============================================================ */
+const PHRASE_TARGETS = [32, 64, 96, 128];
+const gradeFor = ms => (ms == null ? { label: 'Missed', pts: 0, tone: 'bad' } : Math.abs(ms) <= 70 ? { label: 'Excellent', pts: 100, tone: 'ok' } : Math.abs(ms) <= 180 ? { label: 'Good', pts: 60, tone: 'warn' } : { label: 'Missed', pts: 0, tone: 'bad' });
+
+function drawRunway(canvas, b, drops, flash) {
+  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+  const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#0c0f15'; ctx.fillRect(0, 0, w, h);
+  const headX = w * 0.22, ahead = 10, px = (w - headX) / ahead;
+  for (let beat = Math.floor(b - 3); beat <= b + ahead + 1; beat++) {
+    const x = headX + (beat - b) * px; if (x < -20 || x > w + 20) continue;
+    const isPhrase = beat % 32 === 0 && beat > 0, isBar = beat % 4 === 0;
+    if (isPhrase) {
+      const scored = drops[beat];
+      ctx.fillStyle = scored ? (scored.grade.tone === 'ok' ? 'rgba(61,220,151,.9)' : scored.grade.tone === 'warn' ? 'rgba(255,180,84,.9)' : 'rgba(255,92,122,.9)') : 'rgba(56,200,255,.95)';
+      ctx.fillRect(x - 3, 6, 6, h - 12);
+      ctx.font = '700 10px JetBrains Mono, monospace'; ctx.textAlign = 'center'; ctx.fillText(scored ? scored.grade.label.toUpperCase() : 'DROP', x, h - 4);
+    } else if (isBar) { ctx.fillStyle = 'rgba(233,237,245,.55)'; ctx.fillRect(x - 1, h * 0.25, 2, h * 0.5); }
+    else { ctx.fillStyle = 'rgba(233,237,245,.18)'; ctx.fillRect(x - 0.5, h * 0.4, 1, h * 0.2); }
+  }
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0, 0, headX, h);
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(headX, 0); ctx.lineTo(headX, h); ctx.stroke();
+  const pulse = 1 - frac(b);
+  ctx.fillStyle = `rgba(56,200,255,${0.15 + 0.4 * pulse})`; ctx.beginPath(); ctx.arc(headX, h / 2, 8 + 10 * pulse, 0, Math.PI * 2); ctx.fill();
+  if (flash && nowMs() < flash.until) {
+    ctx.fillStyle = flash.color; ctx.font = '700 18px Unbounded, Manrope, sans-serif'; ctx.textAlign = 'left'; ctx.fillText(flash.text, headX + 16, h / 2 - 6);
+    ctx.fillStyle = '#8d96aa'; ctx.font = '600 11px JetBrains Mono, monospace'; ctx.fillText(flash.sub, headX + 16, h / 2 + 12);
+  }
+}
+
+function PhraseDrop({ act, notify }) {
+  const [bpm, setBpm] = useState(128);
+  const [phase, setPhase] = useState('idle');
+  const frame = useFrameLoop(60);
+  const st = useRef(null), canvasRef = useRef(null), [result, setResult] = useState(null);
+  const beatAt = t => (st.current ? 24 + ((t - st.current.startAt) / 60000) * bpm : 0);
+
+  const start = () => {
+    engine.ensure();
+    st.current = { startAt: nowMs() + 600, drops: {}, flash: null, lastFalse: 0 };
+    setResult(null); setPhase('running');
+  };
+  const finish = () => {
+    const s = st.current; const drops = PHRASE_TARGETS.map(t => s.drops[t]);
+    const points = drops.reduce((a, d) => a + d.grade.pts, 0), pct = Math.round((points / (PHRASE_TARGETS.length * 100)) * 100);
+    const hits = drops.filter(d => d.ms != null), avgAbs = hits.length ? Math.round(hits.reduce((a, d) => a + Math.abs(d.ms), 0) / hits.length) : null;
+    const round = { pct, points, avgAbs, bpm, drops: drops.map(d => ({ target: d.target, ms: d.ms, grade: d.grade.label })), at: Date.now() };
+    setResult(round); setPhase('result');
+    act({ type: 'phrase', round });
+  };
+  const hit = () => {
+    const s = st.current; if (!s || phase !== 'running') return;
+    const t = nowMs(), b = beatAt(t), nearest = Math.round(b / 32) * 32;
+    if (nearest < 32 || !PHRASE_TARGETS.includes(nearest)) { s.flash = { text: 'Too early', sub: 'Wait for the DROP marker to reach the line', color: '#ffb454', until: t + 900 }; return; }
+    if (s.drops[nearest]) { s.flash = { text: 'Already dropped', sub: 'Wait for the next phrase', color: '#8d96aa', until: t + 900 }; return; }
+    const ms = Math.round(((b - nearest) / bpm) * 60000), grade = gradeFor(ms);
+    s.drops[nearest] = { target: nearest, ms, grade };
+    s.flash = { text: grade.label, sub: `${Math.abs(ms)} ms ${ms >= 0 ? 'late' : 'early'} · +${grade.pts}`, color: grade.tone === 'ok' ? '#3ddc97' : grade.tone === 'warn' ? '#ffb454' : '#ff5c7a', until: t + 1100 };
+  };
+  // auto-miss + end of round + draw
+  useEffect(() => {
+    const s = st.current; if (!s) return;
+    if (phase === 'running') {
+      const b = beatAt(nowMs());
+      for (const tgt of PHRASE_TARGETS) if (!s.drops[tgt] && b > tgt + 0.6) { s.drops[tgt] = { target: tgt, ms: null, grade: gradeFor(null) }; s.flash = { text: 'Missed', sub: 'No CUE on the phrase start', color: '#ff5c7a', until: nowMs() + 1000 }; }
+      if (PHRASE_TARGETS.every(t => s.drops[t]) && b > 128 + 2) finish();
+    }
+    if (canvasRef.current) drawRunway(canvasRef.current, phase === 'running' ? beatAt(nowMs()) : 24, s.drops, s.flash);
+  }, [frame, phase]);
+  // metronome + groove scheduling
+  useEffect(() => {
+    if (phase !== 'running' || !engine.ctx) return;
+    let cursor = null;
+    const iv = setInterval(() => {
+      const t = nowMs(), b = beatAt(t), spb = 60 / bpm;
+      if (cursor == null || cursor < b - 0.5) cursor = Math.ceil(b);
+      const horizon = b + 0.2 / spb;
+      while (cursor <= horizon) {
+        const perf = st.current.startAt + ((cursor - 24) / bpm) * 60000;
+        const at = engine.toAudio(perf);
+        if (at >= engine.ctx.currentTime - 0.01) engine.drillBeat(at, cursor, spb);
+        cursor++;
+      }
+    }, 30);
+    return () => clearInterval(iv);
+  }, [phase, bpm]);
+  useEffect(() => {
+    const onKey = e => { if (e.code === 'Space' && phase === 'running') { e.preventDefault(); hit(); } };
+    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
+  });
+
+  const b = phase === 'running' ? beatAt(nowMs()) : 24;
+  const inPhrase = ((Math.floor(b) % 32) + 32) % 32, bar = Math.floor(inPhrase / 4) + 1, beat = (inPhrase % 4) + 1;
+  const nextTarget = st.current ? PHRASE_TARGETS.find(t => !st.current.drops[t]) : 32;
+  const toGo = nextTarget != null ? Math.max(0, Math.ceil(nextTarget - b)) : 0;
+  const dropsSoFar = st.current ? PHRASE_TARGETS.filter(t => st.current.drops[t]).map(t => st.current.drops[t]) : [];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="font-display text-xl font-bold">Phrase Drop Challenge</h2>
+          <p className="max-w-prose text-sm text-muted">A beat clock runs through 32-beat phrases. Hit CUE (or the space bar) exactly on beat 1 of each new phrase. Four drops per round. Within 70 ms is Excellent, within 180 ms is Good, anything else is a miss.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted" htmlFor="phrase-bpm">Tempo</label>
+          <select id="phrase-bpm" value={bpm} onChange={e => setBpm(+e.target.value)} disabled={phase === 'running'} className="rounded-lg border border-line2 bg-panel3 px-2 py-1.5 font-mono text-sm">
+            {[120, 124, 128, 132, 136, 140].map(v => <option key={v} value={v}>{v} BPM</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <Panel title="Runway" icon="Activity" right={<Chip tone={phase === 'running' ? 'neon' : 'muted'}>{phase === 'running' ? 'LIVE' : phase === 'result' ? 'Round over' : 'Ready'}</Chip>}>
+          <div className="flex flex-col gap-3">
+            <div className="h-[120px] overflow-hidden rounded-xl border border-line"><canvas ref={canvasRef} className="wave-canvas" aria-label="Phrase runway" /></div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-xl border border-line bg-panel2 py-2"><div className="text-[10px] uppercase tracking-[0.18em] text-muted">Bar</div><div className="font-mono text-2xl font-semibold tabular text-neon">{bar}<span className="text-sm text-muted">/8</span></div></div>
+              <div className="rounded-xl border border-line bg-panel2 py-2"><div className="text-[10px] uppercase tracking-[0.18em] text-muted">Beat</div><div className="font-mono text-2xl font-semibold tabular">{beat}</div></div>
+              <div className="rounded-xl border border-line bg-panel2 py-2"><div className="text-[10px] uppercase tracking-[0.18em] text-muted">Drop in</div><div className={cx('font-mono text-2xl font-semibold tabular', toGo <= 4 ? 'text-warn' : '')}>{phase === 'running' && nextTarget != null ? toGo : '—'}</div></div>
+            </div>
+            <div className="grid grid-cols-8 gap-1" aria-hidden="true">
+              {Array.from({ length: 32 }, (_, i) => <span key={i} className={cx('h-2.5 rounded-sm', phase === 'running' && i === inPhrase ? (i % 4 === 0 ? 'bg-warn' : 'bg-neon') : phase === 'running' && i < inPhrase ? 'bg-neon/35' : 'bg-line')} />)}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {phase === 'running'
+                ? <button type="button" onClick={hit} className="btn-press flex h-20 w-full items-center justify-center gap-3 rounded-2xl bg-neon font-display text-2xl font-bold text-bg shadow-glow sm:w-64"><Icon name="Crosshair" size={26} />CUE</button>
+                : <Button tone="primary" size="lg" icon="Play" onClick={start}>{phase === 'result' ? 'Play again' : 'Start round'}</Button>}
+              <span className="text-xs text-muted">{phase === 'running' ? 'Space bar works too. Listen for the accent click on the one.' : 'Four phrases. The first drop comes after 8 beats of count-in.'}</span>
+            </div>
+          </div>
+        </Panel>
+        <Panel title="This round" icon="ListChecks">
+          <div className="flex flex-col gap-2">
+            {PHRASE_TARGETS.map((t, i) => { const d = dropsSoFar.find(x => x.target === t); return (
+              <div key={t} className="flex items-center justify-between rounded-lg border border-line bg-panel2 px-3 py-2 text-sm">
+                <span className="text-muted">Drop {i + 1}</span>
+                {d ? <span className="flex items-center gap-2"><span className="font-mono text-xs tabular text-muted">{d.ms == null ? '—' : `${Math.abs(d.ms)} ms ${d.ms >= 0 ? 'late' : 'early'}`}</span><Chip tone={d.grade.tone}>{d.grade.label}</Chip></span> : <Chip>pending</Chip>}
+              </div>); })}
+            {result && (
+              <div className="mt-2 rounded-xl border border-neon/40 bg-neon/5 p-3 rise">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-muted">Round score</div>
+                <div className="font-display text-3xl font-bold text-neon">{result.pct}%</div>
+                <div className="text-xs text-muted">{result.avgAbs != null ? `Average ${result.avgAbs} ms off the one.` : 'No drops landed.'} {result.pct >= 90 ? 'Phrase Master territory.' : result.pct >= 60 ? 'Solid. Tighten up for the badge at 90%.' : 'Count out loud with the clicks and try again.'}</div>
+              </div>
+            )}
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   Drill 2: Ear Training Equalizer
+   ============================================================ */
+const EAR_LIMIT = 15, EAR_ROUNDS = 3;
+function earSetup(dominant) {
+  const t = nowMs();
+  const dom = pick([-0.6, 0.7, -0.35, 0.5]), oth = pick([0, 0.4, -0.3, 0.2]);
+  const mk = (id, track, low) => makeDeck(id, track, { playing: true, startedAt: t, offsetBeats: 64, cueBeats: 64, fader: 1, eq: { low, mid: 0, high: 0 } });
+  return { decks: { A: mk('A', TRACKS.nightShift, dominant === 'A' ? dom : oth), B: mk('B', TRACKS.saltwater, dominant === 'B' ? dom : oth) }, xf: 0.5 };
+}
+function EarTraining({ act, notify }) {
+  const [sim, setSim, simRef, actions] = useSim(() => ({ decks: { A: makeDeck('A', TRACKS.nightShift, { offsetBeats: 64 }), B: makeDeck('B', TRACKS.saltwater, { offsetBeats: 64 }) }, xf: 0.5 }));
+  const frame = useFrameLoop(30);
+  const [phase, setPhase] = useState('idle');
+  const [round, setRound] = useState(0), [dominant, setDominant] = useState('A'), [results, setResults] = useState([]);
+  const rr = useRef({ startAt: 0, holdSince: null }), mounted = useRef(true);
+  const [summary, setSummary] = useState(null);
+  useEffect(() => { mounted.current = true; engine.bind(() => simRef.current); return () => { mounted.current = false; engine.unbind(); }; }, []);
+
+  const beginRound = i => {
+    const dom = Math.random() < 0.5 ? 'A' : 'B';
+    setDominant(dom); setRound(i); setSim(earSetup(dom)); rr.current = { startAt: nowMs(), holdSince: null }; setPhase('running');
+  };
+  const startRun = () => { engine.ensure(); setResults([]); setSummary(null); beginRound(0); };
+  const endRound = (success, time) => {
+    const next = [...results, { success, time, dominant }];
+    setResults(next); setPhase('between');
+    setTimeout(() => {
+      if (!mounted.current) return;
+      if (next.length >= EAR_ROUNDS) {
+        actions.stopAll();
+        const ok = next.filter(r => r.success), allOk = ok.length === EAR_ROUNDS;
+        const avg = ok.length ? +(ok.reduce((a, r) => a + r.time, 0) / ok.length).toFixed(1) : null;
+        const roundRec = { success: allOk, avg, results: next.map(r => ({ success: r.success, time: r.time })), at: Date.now() };
+        setSummary(roundRec); setPhase('result'); act({ type: 'ear', round: roundRec });
+      } else beginRound(next.length);
+    }, 1400);
+  };
+  const other = dominant === 'A' ? 'B' : 'A';
+  const goalMet = s => Math.abs(s.decks[dominant].eq.low) <= 0.12 && s.decks[other].eq.low <= -0.9;
+  useEffect(() => {
+    if (phase !== 'running') return;
+    const t = nowMs(), elapsed = (t - rr.current.startAt) / 1000;
+    if (goalMet(simRef.current)) {
+      if (rr.current.holdSince == null) rr.current.holdSince = t;
+      else if (t - rr.current.holdSince >= 700) endRound(true, +(elapsed - 0.7).toFixed(1));
+    } else rr.current.holdSince = null;
+    if (elapsed >= EAR_LIMIT && phase === 'running' && rr.current.holdSince == null) endRound(false, EAR_LIMIT);
+  }, [frame]);
+
+  const elapsed = phase === 'running' ? (nowMs() - rr.current.startAt) / 1000 : 0;
+  const remaining = clamp(EAR_LIMIT - elapsed, 0, EAR_LIMIT);
+  const lv = bassLevels(sim), mud = Math.min(lv.A, lv.B);
+  const holding = phase === 'running' && rr.current.holdSince != null;
+  const ringR = 44, circ = 2 * Math.PI * ringR;
+  const lowOk = id => (id === dominant ? Math.abs(sim.decks[id].eq.low) <= 0.12 : sim.decks[id].eq.low <= -0.9);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="font-display text-xl font-bold">Ear Training Equalizer</h2>
+        <p className="max-w-prose text-sm text-muted">Two tracks play with their basslines fighting. The dominant track is the one the crowd is dancing to. Turn its LOW knob to 12 o'clock and KILL the other deck's LOW. Three rounds, 15 seconds each. Hold the clean setting for a moment to lock it in.</p>
+      </div>
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <Panel title={phase === 'running' || phase === 'between' ? `Round ${round + 1} of ${EAR_ROUNDS}` : 'Mixer · low band'} icon="Ear"
+          right={phase === 'running' && <Chip tone={holding ? 'ok' : 'neon'}>{holding ? 'Hold it…' : `Keep DECK ${dominant}`}</Chip>}>
+          <div className="flex flex-col items-center gap-5">
+            {phase === 'running' || phase === 'between' ? (
+              <div className="w-full rounded-xl border border-neon/40 bg-neon/5 px-4 py-3 text-center">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neon">Crowd is dancing to Deck {dominant}</div>
+                <div className="text-sm text-muted">Deck {dominant} LOW to 12 o'clock (0 dB) · Deck {other} LOW to KILL</div>
+              </div>
+            ) : (
+              <div className="w-full rounded-xl border border-line bg-panel2 px-4 py-3 text-center text-sm text-muted">Press start. Each round picks a new dominant deck and scrambles the knobs.</div>
+            )}
+            <div className="flex w-full flex-wrap items-center justify-center gap-6 sm:gap-10">
+              <div className={cx('flex flex-col items-center gap-2 rounded-2xl border px-5 py-4 transition-colors', phase === 'running' ? (lowOk('A') ? 'border-ok/60 bg-ok/5' : 'border-line bg-panel2') : 'border-line bg-panel2')}>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">Deck A {phase === 'running' && dominant === 'A' && <span className="text-neon">· keep</span>}</div>
+                <Knob value={sim.decks.A.eq.low} onChange={v => actions.setEq('A', 'low', v)} label="Low" color="var(--low)" size={96} disabled={phase !== 'running'} highlight={phase === 'running' && !lowOk('A')} />
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <svg width="110" height="110" viewBox="0 0 110 110" aria-label={`${Math.ceil(remaining)} seconds left`}>
+                  <circle cx="55" cy="55" r={ringR} fill="none" stroke="var(--line-2)" strokeWidth="8" />
+                  <circle cx="55" cy="55" r={ringR} fill="none" stroke={remaining < 5 ? 'var(--bad)' : holding ? 'var(--ok)' : 'var(--neon)'} strokeWidth="8" strokeLinecap="round"
+                    strokeDasharray={circ} strokeDashoffset={circ * (1 - remaining / EAR_LIMIT)} transform="rotate(-90 55 55)" />
+                  <text x="55" y="62" textAnchor="middle" fontSize="24" fontWeight="600" fontFamily="JetBrains Mono, monospace" fill="#e9edf5">{phase === 'running' ? Math.ceil(remaining) : EAR_LIMIT}</text>
+                </svg>
+                <div className="text-[10px] uppercase tracking-[0.18em] text-muted">seconds</div>
+              </div>
+              <div className={cx('flex flex-col items-center gap-2 rounded-2xl border px-5 py-4 transition-colors', phase === 'running' ? (lowOk('B') ? 'border-ok/60 bg-ok/5' : 'border-line bg-panel2') : 'border-line bg-panel2')}>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">Deck B {phase === 'running' && dominant === 'B' && <span className="text-neon">· keep</span>}</div>
+                <Knob value={sim.decks.B.eq.low} onChange={v => actions.setEq('B', 'low', v)} label="Low" color="var(--low)" size={96} disabled={phase !== 'running'} highlight={phase === 'running' && !lowOk('B')} />
+              </div>
+            </div>
+            <div className="w-full max-w-md"><MudMeter sim={sim} /></div>
+            <div className="flex w-full max-w-md items-end justify-center gap-6" aria-hidden="true">
+              {['A', 'B'].map(id => { const d = sim.decks[id]; const step = Math.floor(beatsOf(d, nowMs()) * 4); const a = d.playing ? stepAmps(d.track.pattern, step).low * bandGain(d.eq.low) * faderGain(d.fader) : 0; return (
+                <div key={id} className="flex flex-col items-center gap-1"><div className="flex h-16 w-10 items-end overflow-hidden rounded-md bg-panel3"><div className="w-full rounded-t-md bg-low transition-[height] duration-75" style={{ height: `${Math.round(Math.min(1, a) * 100)}%`, opacity: 0.9 }} /></div><span className="text-[10px] uppercase tracking-[0.18em] text-muted">Bass {id}</span></div>); })}
+            </div>
+            {phase !== 'running' && phase !== 'between' && <Button tone="primary" size="lg" icon="Play" onClick={startRun}>{phase === 'result' ? 'Play again' : 'Start 3 rounds'}</Button>}
+          </div>
+        </Panel>
+        <Panel title="Rounds" icon="ListChecks">
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: EAR_ROUNDS }, (_, i) => { const r = results[i]; return (
+              <div key={i} className="flex items-center justify-between rounded-lg border border-line bg-panel2 px-3 py-2 text-sm">
+                <span className="text-muted">Round {i + 1}{r && <span className="ml-1 text-xs">· keep {r.dominant}</span>}</span>
+                {r ? <span className="flex items-center gap-2"><span className="font-mono text-xs tabular text-muted">{r.success ? `${r.time.toFixed(1)} s` : 'time up'}</span><Chip tone={r.success ? (r.time < 5 ? 'ok' : 'neon') : 'bad'}>{r.success ? (r.time < 5 ? 'Sharp' : 'Clean') : 'Muddy'}</Chip></span> : <Chip>{phase === 'running' && i === round ? 'live' : 'pending'}</Chip>}
+              </div>); })}
+            {summary && (
+              <div className={cx('mt-2 rounded-xl border p-3 rise', summary.success ? 'border-ok/40 bg-ok/5' : 'border-warn/40 bg-warn/5')}>
+                <div className="text-[10px] uppercase tracking-[0.18em] text-muted">Result</div>
+                <div className={cx('font-display text-2xl font-bold', summary.success ? 'text-ok' : 'text-warn')}>{summary.success ? 'Clean transitions' : `${summary.results.filter(r => r.success).length} of ${EAR_ROUNDS} clean`}</div>
+                <div className="text-xs text-muted">{summary.avg != null ? `Average ${summary.avg} s per clean round.` : 'No clean rounds yet.'} {summary.success && summary.avg < 5 ? 'Sharp ears.' : summary.success ? 'Under 5 s average earns Sharp Ears.' : 'Kill the wrong bass first, then centre the right one.'}</div>
+              </div>
+            )}
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function DrillsView({ progress, act, notify, initialTab }) {
+  const [tab, setTab] = useState(initialTab || 'phrase');
+  const phraseOpen = progress.lessons[1].done, earOpen = progress.lessons[3].done;
+  const tabs = [
+    { id: 'phrase', name: 'Phrase Drop Challenge', icon: 'Target', open: phraseOpen, needs: 'Lesson 1' },
+    { id: 'ear', name: 'Ear Training Equalizer', icon: 'Ear', open: earOpen, needs: 'Lesson 3' },
+  ];
+  const cur = tabs.find(t => t.id === tab);
+  return (
+    <div className="flex flex-col gap-5">
+      <header className="flex flex-col gap-2">
+        <Chip tone="neon" className="w-fit">Practice drills</Chip>
+        <h1 className="font-display text-2xl font-bold sm:text-3xl">Drills & mini-games</h1>
+        <p className="max-w-prose text-[15px] text-muted">Short, scored exercises that train the reflexes the lessons introduce. Scores feed your timing accuracy and badges on the dashboard.</p>
+      </header>
+      <div className="flex flex-wrap gap-2">
+        {tabs.map(t => (
+          <button key={t.id} type="button" onClick={() => setTab(t.id)} className={cx('flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors', tab === t.id ? 'border-neon bg-neon/10 text-neon' : 'border-line2 bg-panel text-muted hover:text-fg')}>
+            <Icon name={t.open ? t.icon : 'Lock'} size={16} />{t.name}{!t.open && <span className="text-xs font-normal">· after {t.needs}</span>}
+          </button>
+        ))}
+      </div>
+      {cur.open
+        ? (tab === 'phrase' ? <PhraseDrop key="phrase" act={act} notify={notify} /> : <EarTraining key="ear" act={act} notify={notify} />)
+        : <Panel><div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-panel3 text-muted"><Icon name="Lock" size={20} /></span><div><div className="font-semibold">{cur.name} unlocks after {cur.needs}</div><div className="text-sm text-muted">The drill builds on what that lesson teaches. Finish its guided tour and knowledge check first.</div></div></div></Panel>}
+    </div>
+  );
+}
+
+/* ============================================================
+   Progress dashboard
+   ============================================================ */
+function Ring({ value, size = 64, stroke = 7, color = 'var(--neon)', children }) {
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  return (
+    <div className="relative grid place-items-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} aria-hidden="true">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line-2)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - clamp(value, 0, 1))} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+      </svg>
+      <div className="absolute inset-0 grid place-items-center">{children}</div>
+    </div>
+  );
+}
+function Dashboard({ progress, act, go }) {
+  const done = [1, 2, 3, 4].filter(i => progress.lessons[i].done).length;
+  const lvl = levelFor(progress.xp);
+  const toNext = lvl.next ? (progress.xp - lvl.floor) / (lvl.next - lvl.floor) : 1;
+  const bestRound = progress.phrase.rounds.reduce((b, r) => (!b || r.pct > b.pct ? r : b), null);
+  const [confirm, setConfirm] = useState(false);
+  const fmtDate = ts => new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  return (
+    <div className="flex flex-col gap-5">
+      <header className="flex flex-col gap-2">
+        <Chip tone="neon" className="w-fit">Progress</Chip>
+        <h1 className="font-display text-2xl font-bold sm:text-3xl">Your dashboard</h1>
+        <p className="max-w-prose text-[15px] text-muted">Lessons, timing and badges in one place. Everything here is earned in the lessons and drills.</p>
+      </header>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="flex items-center gap-4 rounded-2xl border border-line bg-panel p-4">
+          <Ring value={done / 4} color="var(--ok)"><span className="font-mono text-sm font-semibold tabular">{done}/4</span></Ring>
+          <div><div className="text-[10px] uppercase tracking-[0.18em] text-muted">Lessons completed</div><div className="font-display text-xl font-bold">{done === 4 ? 'All four' : done === 0 ? 'Not yet' : `${done} of 4`}</div><div className="text-xs text-muted">{done === 4 ? 'Full curriculum done.' : `Next: ${lessonById(done + 1).title}`}</div></div>
+        </div>
+        <div className="flex items-center gap-4 rounded-2xl border border-line bg-panel p-4">
+          <Ring value={progress.phrase.best / 100} color="var(--neon)"><span className="font-mono text-sm font-semibold tabular">{progress.phrase.rounds.length ? `${progress.phrase.best}%` : '—'}</span></Ring>
+          <div><div className="text-[10px] uppercase tracking-[0.18em] text-muted">Timing accuracy score</div><div className="font-display text-xl font-bold">{progress.phrase.rounds.length ? `${progress.phrase.best}%` : 'No rounds'}</div><div className="text-xs text-muted">{bestRound ? `Best of ${progress.phrase.rounds.length} round${progress.phrase.rounds.length > 1 ? 's' : ''}${bestRound.avgAbs != null ? ` · ${bestRound.avgAbs} ms average` : ''}` : 'Play the Phrase Drop Challenge.'}</div></div>
+        </div>
+        <div className="flex items-center gap-4 rounded-2xl border border-line bg-panel p-4">
+          <Ring value={toNext} color="var(--warn)"><Icon name="Flame" size={20} className="text-warn" /></Ring>
+          <div><div className="text-[10px] uppercase tracking-[0.18em] text-muted">Level · XP</div><div className="font-display text-xl font-bold">{lvl.name}</div><div className="text-xs text-muted">{progress.xp} XP{lvl.next ? ` · ${lvl.next - progress.xp} to ${lvl.nextName}` : ' · top level'}</div></div>
+        </div>
+      </div>
+
+      <Panel title={`Badges · ${progress.badges.length} of ${BADGES.length}`} icon="Award">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {BADGES.map(b => { const has = progress.badges.includes(b.id); return (
+            <div key={b.id} className={cx('flex items-center gap-3 rounded-xl border p-3', has ? 'border-neon/50 bg-neon/5' : 'border-line bg-panel2 opacity-70')}>
+              <span className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-xl', has ? 'bg-neon/15 text-neon' : 'bg-panel3 text-dim')}><Icon name={has ? b.icon : 'Lock'} size={18} /></span>
+              <div className="min-w-0"><div className="text-sm font-bold">{b.name}</div><div className="text-xs text-muted">{has ? 'Unlocked' : b.how}</div></div>
+            </div>); })}
+        </div>
+      </Panel>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Panel title="Roadmap" icon="Map">
+          <div className="flex flex-col gap-2">
+            {LESSONS.map(l => { const p = progress.lessons[l.id]; const unlocked = l.id === 1 || progress.lessons[l.id - 1].done; return (
+              <button key={l.id} type="button" disabled={!unlocked} onClick={() => go({ type: 'lesson', id: l.id })} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-panel2 px-3 py-2 text-left text-sm transition-colors enabled:hover:border-neon/50 disabled:opacity-60">
+                <span className="flex items-center gap-2"><Icon name={p.done ? 'CheckCircle2' : unlocked ? l.icon : 'Lock'} size={16} className={p.done ? 'text-ok' : unlocked ? 'text-neon' : 'text-dim'} />{l.id}. {l.title}</span>
+                <Chip tone={p.done ? 'ok' : p.tour ? 'warn' : unlocked ? 'neon' : 'muted'}>{p.done ? 'Complete' : p.tour ? 'Quiz pending' : unlocked ? 'Open' : 'Locked'}</Chip>
+              </button>); })}
+          </div>
+        </Panel>
+        <Panel title="Recent drill rounds" icon="Clock">
+          {progress.phrase.rounds.length === 0 && progress.ear.rounds.length === 0
+            ? <div className="text-sm text-muted">No rounds yet. Drills unlock as you complete lessons.</div>
+            : <div className="flex flex-col gap-2">
+                {[...progress.phrase.rounds.map(r => ({ ...r, kind: 'phrase' })), ...progress.ear.rounds.map(r => ({ ...r, kind: 'ear' }))].sort((a, b) => b.at - a.at).slice(0, 6).map((r, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-panel2 px-3 py-2 text-sm">
+                    <span className="flex items-center gap-2"><Icon name={r.kind === 'phrase' ? 'Target' : 'Ear'} size={14} className="text-neon" />{r.kind === 'phrase' ? `Phrase Drop · ${r.bpm} BPM` : 'Ear Training'}</span>
+                    <span className="flex items-center gap-2"><span className="font-mono text-xs tabular text-muted">{fmtDate(r.at)}</span>
+                      {r.kind === 'phrase' ? <Chip tone={r.pct >= 90 ? 'ok' : r.pct >= 60 ? 'warn' : 'bad'}>{r.pct}%</Chip> : <Chip tone={r.success ? 'ok' : 'bad'}>{r.success ? `${r.avg} s avg` : 'muddy'}</Chip>}</span>
+                  </div>))}
+              </div>}
+        </Panel>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel p-4">
+        <div className="text-sm text-muted">Progress is kept in this browser. Resetting clears lessons, scores and badges.</div>
+        {confirm
+          ? <div className="flex items-center gap-2"><span className="text-sm">Reset everything?</span><Button tone="danger" size="sm" onClick={() => { act({ type: 'reset' }); setConfirm(false); }}>Yes, reset</Button><Button tone="ghost" size="sm" onClick={() => setConfirm(false)}>Keep</Button></div>
+          : <Button tone="danger" size="sm" icon="RotateCcw" onClick={() => setConfirm(true)}>Reset progress</Button>}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   Roadmap sidebar, top bar, toasts, app shell
+   ============================================================ */
+function Roadmap({ progress, view, go, onClose }) {
+  const lvl = levelFor(progress.xp);
+  const toNext = lvl.next ? (progress.xp - lvl.floor) / (lvl.next - lvl.floor) : 1;
+  const isActive = v => (v.type === view.type && (v.type !== 'lesson' || v.id === view.id));
+  const drillsOpen = progress.lessons[1].done;
+  return (
+    <nav className="flex h-full flex-col gap-5 overflow-y-auto scroll-thin bg-panel px-4 pb-4 pt-5" style={{ paddingLeft: 'max(16px, env(safe-area-inset-left, 0px))' }} aria-label="Curriculum">
+      <div className="flex items-start justify-between">
+        <button type="button" onClick={() => go({ type: 'dashboard' })} className="text-left">
+          <div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-lg bg-neon text-bg"><Icon name="Disc3" size={18} /></span><span className="font-display text-base font-bold tracking-tight">DJ Academy</span></div>
+          <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-muted">Structured path · 4 lessons</div>
+        </button>
+        {onClose && <button type="button" onClick={onClose} className="rounded-lg p-1 text-muted hover:text-fg lg:hidden" aria-label="Close menu"><Icon name="X" size={18} /></button>}
+      </div>
+      <div>
+        <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">Curriculum roadmap</div>
+        <ol className="relative flex flex-col">
+          {LESSONS.map((l, i) => {
+            const p = progress.lessons[l.id], unlocked = l.id === 1 || progress.lessons[l.id - 1].done, active = isActive({ type: 'lesson', id: l.id });
+            const status = p.done ? 'Complete' : p.tour ? 'Quiz pending' : unlocked ? (active ? 'In progress' : 'Up next') : 'Locked';
+            return (
+              <li key={l.id} className="relative pl-9">
+                {i < LESSONS.length - 1 && <span className={cx('absolute left-[13px] top-7 h-[calc(100%-8px)] w-0.5', p.done ? 'bg-ok/60' : 'bg-line2')} aria-hidden="true" />}
+                <span className={cx('absolute left-0 top-1 grid h-7 w-7 place-items-center rounded-full border text-xs font-bold', p.done ? 'border-ok bg-ok/15 text-ok' : active ? 'border-neon bg-neon/15 text-neon shadow-glow' : unlocked ? 'border-line2 bg-panel3 text-fg' : 'border-line bg-panel2 text-dim')}>
+                  {p.done ? <Icon name="Check" size={14} /> : unlocked ? l.id : <Icon name="Lock" size={12} />}
+                </span>
+                <button type="button" disabled={!unlocked} onClick={() => go({ type: 'lesson', id: l.id })}
+                  className={cx('mb-3 w-full rounded-xl border px-3 py-2 text-left transition-colors', active ? 'border-neon/60 bg-neon/10' : 'border-transparent hover:bg-panel2', !unlocked && 'cursor-not-allowed opacity-60')}>
+                  <div className="text-[13px] font-bold leading-tight">{l.title}</div>
+                  <div className="mt-0.5 text-[11px] text-muted">{l.subtitle}</div>
+                  <div className={cx('mt-1 text-[10px] font-semibold uppercase tracking-[0.14em]', p.done ? 'text-ok' : active ? 'text-neon' : 'text-muted')}>{status}{!p.done && !unlocked && ` · finish lesson ${l.id - 1}`}</div>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+      <div>
+        <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">Practice</div>
+        <button type="button" onClick={() => go({ type: 'drills' })} className={cx('flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors', isActive({ type: 'drills' }) ? 'border-neon/60 bg-neon/10' : 'border-transparent hover:bg-panel2')}>
+          <span className="grid h-7 w-7 place-items-center rounded-lg bg-panel3 text-neon"><Icon name={drillsOpen ? 'Target' : 'Lock'} size={15} /></span>
+          <div><div className="text-[13px] font-bold">Practice drills</div><div className="text-[11px] text-muted">{drillsOpen ? 'Phrase Drop · Ear Training' : 'Unlocks after Lesson 1'}</div></div>
+        </button>
+        <button type="button" onClick={() => go({ type: 'dashboard' })} className={cx('mt-1 flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors', isActive({ type: 'dashboard' }) ? 'border-neon/60 bg-neon/10' : 'border-transparent hover:bg-panel2')}>
+          <span className="grid h-7 w-7 place-items-center rounded-lg bg-panel3 text-neon"><Icon name="BarChart3" size={15} /></span>
+          <div><div className="text-[13px] font-bold">Progress dashboard</div><div className="text-[11px] text-muted">{progress.badges.length} of {BADGES.length} badges</div></div>
+        </button>
+      </div>
+      <div className="mt-auto rounded-xl border border-line bg-panel2 p-3">
+        <div className="flex items-center justify-between text-[11px]"><span className="font-semibold uppercase tracking-[0.14em] text-muted">{lvl.name}</span><span className="font-mono tabular text-fg">{progress.xp} XP</span></div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-panel3"><div className="h-full rounded-full bg-warn" style={{ width: `${Math.round(toNext * 100)}%` }} /></div>
+        <div className="mt-1 text-[11px] text-muted">{lvl.next ? `${lvl.next - progress.xp} XP to ${lvl.nextName}` : 'Top level reached'}</div>
+      </div>
+    </nav>
+  );
+}
+
+function Toasts({ toasts }) {
+  const tone = { info: 'border-neon/50', ok: 'border-ok/60', bad: 'border-bad/60', badge: 'border-warn/70', warn: 'border-warn/60' };
+  const color = { info: 'text-neon', ok: 'text-ok', bad: 'text-bad', badge: 'text-warn', warn: 'text-warn' };
+  return (
+    <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex w-[min(360px,calc(100vw-32px))] flex-col gap-2" style={{ bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))', right: 'max(16px, env(safe-area-inset-right, 0px))' }} aria-live="polite">
+      {toasts.map(t => (
+        <div key={t.id} className={cx('rise flex items-start gap-2 rounded-xl border bg-panel2/95 px-3 py-2 text-sm shadow-lg backdrop-blur', tone[t.kind] || tone.info)}>
+          <Icon name={t.icon || (t.kind === 'badge' ? 'Award' : t.kind === 'ok' ? 'CheckCircle2' : t.kind === 'bad' ? 'X' : 'Info')} size={16} className={cx('mt-0.5 shrink-0', color[t.kind] || color.info)} />
+          <span>{t.msg}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const hashFor = v => (v.type === 'lesson' ? `#lesson-${v.id}` : `#${v.type}`);
+const viewFromHash = () => {
+  const h = (window.location.hash || '').replace('#', '');
+  const m = h.match(/^lesson-(\d)$/); if (m && lessonById(+m[1])) return { type: 'lesson', id: +m[1] };
+  if (h === 'drills' || h === 'dashboard') return { type: h };
+  return null;
+};
+
+function App() {
+  const [progress, setProgress] = useState(loadProgress);
+  const progressRef = useRef(progress); progressRef.current = progress;
+  const [view, setView] = useState(() => viewFromHash() || { type: 'lesson', id: 1 });
+  const [toasts, setToasts] = useState([]);
+  const [soundOn, setSoundOn] = useState(true);
+  const [navOpen, setNavOpen] = useState(false);
+  const unlocked = id => id === 1 || progressRef.current.lessons[id - 1].done;
+  const viewOk = v => (v.type !== 'lesson' || unlocked(v.id));
+  useEffect(() => { saveProgress(progress); }, [progress]);
+  useEffect(() => {
+    const h = hashFor(view);
+    if (window.location.hash !== h) { try { window.location.hash = h; } catch (e) { /* hash routing unavailable */ } }
+  }, [view]);
+  useEffect(() => {
+    const onHash = () => { const v = viewFromHash(); if (v && viewOk(v)) setView(v); };
+    window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  useEffect(() => { if (!viewOk(view)) setView({ type: 'lesson', id: 1 }); }, []);
+
+  const notify = useCallback((msg, kind = 'info', icon) => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts(t => [...t.slice(-3), { id, msg, kind, icon }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3600);
+  }, []);
+  const act = useCallback(action => {
+    const { next, earned, xp } = applyProgress(progressRef.current, action);
+    progressRef.current = next; setProgress(next);
+    if (xp > 0) notify(`+${xp} XP`, 'info', 'Flame');
+    earned.forEach(b => notify(`Badge unlocked: ${b.name}`, 'badge', b.icon));
+    if (action.type === 'quiz' && action.id < 4 && !progressRef.current.lessons[action.id + 1].done) notify(`Lesson ${action.id + 1} unlocked: ${lessonById(action.id + 1).title}`, 'ok', 'Unlock');
+    if (action.type === 'quiz' && action.id === 1) notify('Phrase Drop Challenge unlocked in Practice drills', 'ok', 'Target');
+    if (action.type === 'quiz' && action.id === 3) notify('Ear Training Equalizer unlocked in Practice drills', 'ok', 'Ear');
+    if (action.type === 'reset') notify('Progress reset', 'info', 'RotateCcw');
+  }, [notify]);
+  const go = v => { if (!viewOk(v)) { notify('Finish the previous lesson to unlock this one.', 'warn', 'Lock'); return; } setView(v); setNavOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const toggleSound = () => { const on = !soundOn; setSoundOn(on); engine.ensure(); engine.setEnabled(on); };
+
+  const lvl = levelFor(progress.xp);
+  const title = view.type === 'lesson' ? `Lesson ${view.id}` : view.type === 'drills' ? 'Practice drills' : 'Dashboard';
+  return (
+    <div className="flex min-h-full">
+      <aside className="sticky top-0 hidden h-screen w-[290px] shrink-0 border-r border-line lg:block" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+        <Roadmap progress={progress} view={view} go={go} />
+      </aside>
+      {navOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setNavOpen(false)} />
+          <div className="absolute inset-y-0 left-0 w-[min(320px,88vw)] border-r border-line shadow-2xl rise"><Roadmap progress={progress} view={view} go={go} onClose={() => setNavOpen(false)} /></div>
+        </div>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="sticky z-30 flex items-center justify-between gap-3 border-b border-line bg-bg/85 py-2.5 backdrop-blur" style={{ top: 'env(safe-area-inset-top, 0px)', paddingLeft: 'max(16px, env(safe-area-inset-left, 0px))', paddingRight: 'max(16px, env(safe-area-inset-right, 0px))' }}>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setNavOpen(true)} className="rounded-lg border border-line2 p-1.5 text-muted hover:text-fg lg:hidden" aria-label="Open curriculum"><Icon name="Menu" size={18} /></button>
+            <span className="font-display text-sm font-semibold lg:hidden">DJ Academy</span>
+            <span className="hidden text-sm text-muted lg:inline">{title}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Chip tone="warn" className="hidden sm:inline-flex"><Icon name="Flame" size={11} />{lvl.name} · {progress.xp} XP</Chip>
+            <button type="button" onClick={toggleSound} className={cx('flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold', soundOn ? 'border-neon/50 text-neon' : 'border-line2 text-muted')} aria-pressed={soundOn} title="Synthesised audio for the decks and drills">
+              <Icon name={soundOn ? 'Volume2' : 'VolumeX'} size={15} />{soundOn ? 'Sound on' : 'Muted'}
+            </button>
+          </div>
+        </div>
+        <main className="mx-auto w-full max-w-[1400px] flex-1 py-5" style={{ paddingLeft: 'max(16px, env(safe-area-inset-left, 0px))', paddingRight: 'max(16px, env(safe-area-inset-right, 0px))' }}>
+          {view.type === 'lesson' && <LessonView key={view.id} lesson={lessonById(view.id)} progress={progress} act={act} notify={notify} />}
+          {view.type === 'drills' && <DrillsView progress={progress} act={act} notify={notify} />}
+          {view.type === 'dashboard' && <Dashboard progress={progress} act={act} go={go} />}
+        </main>
+        <footer className="py-4 text-center text-[11px] text-dim" style={{ paddingLeft: 'max(16px, env(safe-area-inset-left, 0px))', paddingRight: 'max(16px, env(safe-area-inset-right, 0px))' }}>
+          DJ Academy · all tracks are synthesised practice loops, not real songs · audio is optional
+        </footer>
+      </div>
+      <Toasts toasts={toasts} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
