@@ -8,6 +8,11 @@ Open `index.html` in any modern browser. Nothing to install. The page loads
 React, Tailwind CSS, Lucide icons and Babel from public CDNs, so it needs an
 internet connection the first time.
 
+`dj-academy-offline.html` is the same app with every library embedded and the
+code pre-compiled. It works from a local file with no internet at all (only the
+web fonts are fetched remotely, with system fallbacks). It is generated from
+`index.html`, so edit the source file and rebuild rather than editing it.
+
 ## What is inside
 
 **Curriculum roadmap.** Four mandatory lessons unlock in order. Each lesson has
